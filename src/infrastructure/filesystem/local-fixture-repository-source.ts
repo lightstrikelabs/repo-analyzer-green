@@ -32,13 +32,14 @@ export class LocalFixtureRepositorySource implements RepositorySource {
     const fixture = this.requireFixture(repository);
     const files = await listFixtureFiles(fixture.rootPath);
 
-    return files.map((filePath) => ({
-      path: filePath,
+    return files.map((file) => ({
+      path: file.path,
+      sizeBytes: file.sizeBytes,
       provenance: {
         repository,
         sourceKind: "local-fixture",
         sourceId: fixture.id,
-        path: filePath,
+        path: file.path,
       },
     }));
   }
@@ -64,6 +65,7 @@ export class LocalFixtureRepositorySource implements RepositorySource {
       return {
         path: filePath,
         text,
+        sizeBytes: fileStat.size,
         provenance: {
           repository,
           sourceKind: "local-fixture",
@@ -96,16 +98,23 @@ export class LocalFixtureRepositorySource implements RepositorySource {
   }
 }
 
-async function listFixtureFiles(rootPath: string): Promise<readonly string[]> {
-  const files: string[] = [];
+type DiscoveredFixtureFile = {
+  readonly path: RepositoryPath;
+  readonly sizeBytes: number;
+};
+
+async function listFixtureFiles(
+  rootPath: string,
+): Promise<readonly DiscoveredFixtureFile[]> {
+  const files: DiscoveredFixtureFile[] = [];
   await collectFiles(rootPath, rootPath, files);
-  return files.sort();
+  return files.sort(compareDiscoveredFixtureFiles);
 }
 
 async function collectFiles(
   rootPath: string,
   currentPath: string,
-  files: string[],
+  files: DiscoveredFixtureFile[],
 ): Promise<void> {
   const entries = await readdir(currentPath, { withFileTypes: true });
 
@@ -117,7 +126,12 @@ async function collectFiles(
     }
 
     if (entry.isFile()) {
-      files.push(toRepositoryPath(rootPath, entryPath));
+      const fileStat = await stat(entryPath);
+      const repositoryPath = toRepositoryPath(rootPath, entryPath);
+      files.push({
+        path: repositoryPath,
+        sizeBytes: fileStat.size,
+      });
     }
   }
 }
@@ -169,4 +183,19 @@ function notFound(
     "file-not-found",
     repository,
   );
+}
+
+function compareDiscoveredFixtureFiles(
+  left: DiscoveredFixtureFile,
+  right: DiscoveredFixtureFile,
+): number {
+  if (left.path < right.path) {
+    return -1;
+  }
+
+  if (left.path > right.path) {
+    return 1;
+  }
+
+  return 0;
 }
