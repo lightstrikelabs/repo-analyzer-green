@@ -37,7 +37,7 @@ Parity does not mean copying red's architecture or scoring formulas. Green shoul
 | Snippet retrieval for follow-up | #35 | Evidence-aware retrieval with citations and missing-context states. |
 | Chat answer contract/provider behavior | #37, #28 | Structured answer contract plus provider adapter; no free-form provider output in domain. |
 | Follow-up UI slideout/conversation threads | #38 | Modular chat components over conversation application services. |
-| Browser local persistence | #39, #74 | Adapter boundary for anonymous/local state with future database migration path. |
+| Browser local persistence | #39, #74 | Single browser-local session envelope for repository form state, latest report, and per-report chat threads, with future database migration path. |
 | Auth/database readiness | #18, #43 | Actor/context, owner/workspace metadata, repository ports, and future access policy. |
 | Preview/live-provider E2E setup | #45, #66, #78 | Vercel preview E2E plus documented OpenRouter secret/test-repo setup. |
 

@@ -7,12 +7,12 @@ import {
   type AnalyzeRepositoryResponse,
 } from "../../application/analyze-repository/analyze-repository-response";
 import {
-  clearBrowserAnalysisSession,
+  clearBrowserLocalSession,
   defaultBrowserRepositoryForm,
   loadBrowserAnalysisSession,
   saveBrowserAnalysisSession,
   type BrowserRepositoryForm,
-} from "../../infrastructure/persistence/browser-analysis-session-storage";
+} from "../../infrastructure/persistence/browser-local-session-storage";
 import { ReportCardView } from "./report-card-view";
 
 type AnalyzeStatus =
@@ -81,10 +81,8 @@ export function AnalyzeRepositoryPanel() {
     }
 
     saveBrowserAnalysisSession(window.localStorage, {
-      schemaVersion: "browser-analysis-session.v1",
       form: repositoryForm,
       ...(latestReport === null ? {} : { latestReport }),
-      updatedAt: new Date().toISOString(),
     });
   }, [hydrated, latestReport, repositoryForm]);
 
@@ -175,7 +173,7 @@ export function AnalyzeRepositoryPanel() {
   }
 
   function resetSavedSession() {
-    clearBrowserAnalysisSession(window.localStorage);
+    clearBrowserLocalSession(window.localStorage);
     setRepositoryForm(defaultBrowserRepositoryForm());
     setLatestReport(null);
     setStatus({ kind: "idle" });

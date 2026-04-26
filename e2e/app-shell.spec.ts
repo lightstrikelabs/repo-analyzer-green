@@ -33,6 +33,9 @@ test("runs the repository analysis workflow", async ({ page }) => {
 
 test("starts a follow-up thread from the report view", async ({ page }) => {
   await page.goto("/");
+  await page
+    .getByLabel("Reviewer model preference")
+    .fill("fixture-parity-model");
   await page.getByRole("button", { name: "Analyze repository" }).click();
 
   await expect(page.getByText("Follow-up").first()).toBeVisible();
@@ -46,16 +49,21 @@ test("starts a follow-up thread from the report view", async ({ page }) => {
   await expect(page.getByText("Evidence-backed answer")).toBeVisible();
   await expect(page.getByText("Relevant evidence from").first()).toBeVisible();
 
-  await page.waitForFunction(() =>
-    window.localStorage
-      .getItem(
-        "repo-analyzer-green.follow-up:report:local-fixture:unknown:minimal-node-library:fixture",
-      )
-      ?.includes("Report: What should we inspect first?"),
+  await page.waitForFunction(
+    () =>
+      window.localStorage
+        .getItem("repo-analyzer-green.browser-local-session")
+        ?.includes("fixture-parity-model") &&
+      window.localStorage
+        .getItem("repo-analyzer-green.browser-local-session")
+        ?.includes("Report: What should we inspect first?"),
   );
 
   await page.reload();
 
+  await expect(page.getByLabel("Reviewer model preference")).toHaveValue(
+    "fixture-parity-model",
+  );
   await expect(
     page.getByText("Report: What should we inspect first?").first(),
   ).toBeVisible();
