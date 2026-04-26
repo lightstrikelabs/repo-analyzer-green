@@ -559,6 +559,7 @@ Required seams:
 - Persistence goes through repository ports
 - Domain objects do not import database clients, ORM types, or auth provider types
 - User-supplied credentials are request-scoped unless encrypted persistence is explicitly designed
+- Browser-local session adapters may store repository form state, selected model preference, latest report cards, and follow-up chat threads for anonymous use, but they must validate schema versions and discard invalid saved data cleanly
 
 Likely future persistence:
 - Relational database for users, workspaces, reports, conversations, and metadata

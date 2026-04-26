@@ -71,6 +71,7 @@ export function FollowUpPanel({
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const repositoryRef = useRef<Map<string, Conversation>>(new Map());
   const contentSource = useMemo(() => createContentSource(), []);
 
@@ -88,9 +89,14 @@ export function FollowUpPanel({
         session.conversation,
       ]),
     );
+    setHydrated(true);
   }, [reportCard.id]);
 
   useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
     persistState(reportCard.id, { sessions, activeConversationId });
     repositoryRef.current = new Map(
       sessions.map((session) => [
@@ -98,7 +104,7 @@ export function FollowUpPanel({
         session.conversation,
       ]),
     );
-  }, [activeConversationId, reportCard.id, sessions]);
+  }, [activeConversationId, hydrated, reportCard.id, sessions]);
 
   const dependencies = useMemo<FollowUpChatDependencies>(
     () => ({
