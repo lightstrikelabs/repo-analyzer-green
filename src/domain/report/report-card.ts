@@ -35,6 +35,7 @@ export const ProjectArchetypeSchema = z.enum([
   "library",
   "service",
   "infrastructure",
+  "docs-heavy",
   "research-notebook",
   "generated-sdk",
   "embedded",
