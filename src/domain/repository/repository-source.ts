@@ -1,4 +1,4 @@
-export type RepositoryProvider = "local-fixture";
+export type RepositoryProvider = "github" | "local-fixture";
 
 export type RepositoryReference = {
   readonly provider: RepositoryProvider;
@@ -10,7 +10,7 @@ export type RepositoryReference = {
 
 export type RepositoryPath = string;
 
-export type RepositorySourceKind = "local-fixture";
+export type RepositorySourceKind = "github-archive" | "local-fixture";
 
 export type RepositoryFileProvenance = {
   readonly repository: RepositoryReference;
@@ -42,7 +42,12 @@ export interface RepositorySource {
 export class RepositorySourceError extends Error {
   constructor(
     message: string,
-    readonly code: "repository-not-found" | "file-not-found",
+    readonly code:
+      | "download-failed"
+      | "extraction-failed"
+      | "file-not-found"
+      | "invalid-repository-reference"
+      | "repository-not-found",
     readonly repository: RepositoryReference,
   ) {
     super(message);
