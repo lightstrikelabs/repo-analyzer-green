@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { z } from "zod";
 
 import type { AnalyzeRepositoryResponse } from "../../application/analyze-repository/analyze-repository-response";
@@ -8,7 +8,6 @@ import {
   continueFollowUpConversation,
   startFollowUpConversation,
   type ChatReviewer,
-  type ConversationRepository,
   type FollowUpChatDependencies,
 } from "../../application/follow-up-chat/follow-up-chat";
 import type {
@@ -25,6 +24,7 @@ import {
 import type { ConversationTargetSelector } from "../../domain/chat/conversation-target-resolver";
 import type { EvidenceContentResult } from "../../domain/chat/evidence-retrieval";
 import type { EvidenceReference } from "../../domain/shared/evidence-reference";
+import { InMemoryConversationRepository } from "../../infrastructure/persistence/in-memory-conversation-repository";
 
 type FollowUpSession = {
   readonly conversation: Conversation;
@@ -72,7 +72,10 @@ export function FollowUpPanel({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  const repositoryRef = useRef<Map<string, Conversation>>(new Map());
+  const conversationRepository = useMemo(
+    () => new InMemoryConversationRepository(),
+    [],
+  );
   const contentSource = useMemo(() => createContentSource(), []);
 
   useEffect(() => {
@@ -83,14 +86,11 @@ export function FollowUpPanel({
         stored.sessions[0]?.conversation.id ??
         null,
     );
-    repositoryRef.current = new Map(
-      stored.sessions.map((session) => [
-        session.conversation.id,
-        session.conversation,
-      ]),
+    conversationRepository.replaceAll(
+      stored.sessions.map((session) => session.conversation),
     );
     setHydrated(true);
-  }, [reportCard.id]);
+  }, [conversationRepository, reportCard.id]);
 
   useEffect(() => {
     if (!hydrated) {
@@ -98,20 +98,11 @@ export function FollowUpPanel({
     }
 
     persistState(reportCard.id, { sessions, activeConversationId });
-    repositoryRef.current = new Map(
-      sessions.map((session) => [
-        session.conversation.id,
-        session.conversation,
-      ]),
-    );
   }, [activeConversationId, hydrated, reportCard.id, sessions]);
 
   const dependencies = useMemo<FollowUpChatDependencies>(
     () => ({
-      conversationRepository: createConversationRepository(
-        repositoryRef,
-        setSessions,
-      ),
+      conversationRepository,
       chatReviewer: createDemoChatReviewer(),
       contentSource,
       now: () => new Date(),
@@ -120,7 +111,7 @@ export function FollowUpPanel({
         return (prefix: string) => `${prefix}:${++index}`;
       })(),
     }),
-    [contentSource],
+    [contentSource, conversationRepository],
   );
 
   const activeSession =
@@ -714,30 +705,6 @@ function readStoredState(reportId: string): StoredFollowUpState {
 
 function storageKey(reportId: string): string {
   return `${storagePrefix}:${reportId}`;
-}
-
-function createConversationRepository(
-  repositoryRef: React.MutableRefObject<Map<string, Conversation>>,
-  setSessions: React.Dispatch<React.SetStateAction<FollowUpSession[]>>,
-): ConversationRepository {
-  return {
-    async get(id: string) {
-      return repositoryRef.current.get(id);
-    },
-    async save(conversation: Conversation) {
-      repositoryRef.current.set(conversation.id, conversation);
-      setSessions((current) =>
-        current.map((session) =>
-          session.conversation.id === conversation.id
-            ? {
-                ...session,
-                conversation,
-              }
-            : session,
-        ),
-      );
-    },
-  };
 }
 
 function createDemoChatReviewer(): ChatReviewer {
