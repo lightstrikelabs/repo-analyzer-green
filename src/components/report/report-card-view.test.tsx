@@ -1,9 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { AnalyzeRepositoryResponse } from "../../application/analyze-repository/analyze-repository-response";
 import type { ReportCard } from "../../domain/report/report-card";
 import { ReportCardView } from "./report-card-view";
+import { triggerPrint } from "./print-report-button";
 
 const reportCard: ReportCard = {
   id: "report:minimal-node-library",
@@ -158,6 +159,38 @@ describe("ReportCardView", () => {
     expect(html).toContain("Release workflow history");
     expect(html).toContain("evidence:test-file");
     expect(html).toContain("How is this package released and verified?");
+  });
+
+  it("renders a Download PDF button so users can export the report", () => {
+    const html = renderToStaticMarkup(<ReportCardView analysis={analysis} />);
+
+    expect(html).toContain("Download PDF");
+  });
+
+  it("hides the Download PDF button itself from the printed output", () => {
+    const html = renderToStaticMarkup(<ReportCardView analysis={analysis} />);
+
+    expect(html).toMatch(
+      /<button[^>]*class="[^"]*print:hidden[^"]*"[^>]*>Download PDF<\/button>/,
+    );
+  });
+
+  it("invokes the native print flow when requested", () => {
+    const print = vi.fn();
+    vi.stubGlobal("window", { print });
+
+    triggerPrint();
+
+    expect(print).toHaveBeenCalledOnce();
+    vi.unstubAllGlobals();
+  });
+
+  it("excludes the follow-up chat from the printed output", () => {
+    const html = renderToStaticMarkup(<ReportCardView analysis={analysis} />);
+
+    expect(html).toMatch(
+      /<section[^>]*aria-labelledby="follow-up-panel-title"[^>]*class="[^"]*print:hidden[^"]*"/,
+    );
   });
 
   it("does not collapse the report into a single overall score", () => {

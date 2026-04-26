@@ -183,7 +183,7 @@ export function AnalyzeRepositoryPanel() {
 
   return (
     <div className="grid min-h-screen gap-6 px-6 py-6 lg:grid-cols-[360px_1fr]">
-      <aside className="rounded-md border border-slate-200 bg-white p-5">
+      <aside className="rounded-md border border-slate-200 bg-white p-5 print:hidden">
         <p className="text-sm font-medium uppercase text-emerald-700">
           Repo Analyzer Green
         </p>

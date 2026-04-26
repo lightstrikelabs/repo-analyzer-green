@@ -194,7 +194,7 @@ export function FollowUpPanel({
   return (
     <section
       aria-labelledby="follow-up-panel-title"
-      className="rounded-md border border-slate-200 bg-white p-5"
+      className="rounded-md border border-slate-200 bg-white p-5 print:hidden"
     >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
         <div>
