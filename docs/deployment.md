@@ -61,6 +61,8 @@ x-vercel-set-bypass-cookie: true
 
 For protected preview deployments, this secret is required for Preview E2E to exercise the application instead of Vercel's deployment protection page.
 
+Future live-provider E2E that uses OpenRouter should read `OPENROUTER_API_KEY` from GitHub Actions secrets and `E2E_TEST_REPOSITORY_URL` from GitHub Actions variables. See [How To Configure OpenRouter For E2E Tests](how-tos/openrouter-e2e.md).
+
 References:
 - [Vercel: Methods to bypass Deployment Protection](https://vercel.com/docs/security/deployment-protection/methods-to-bypass-deployment-protection)
 - [Vercel: Protection Bypass for Automation](https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation)
