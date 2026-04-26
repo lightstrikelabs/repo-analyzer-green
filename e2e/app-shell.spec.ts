@@ -22,6 +22,13 @@ test("runs the repository analysis workflow", async ({ page }) => {
   await expect(
     page.getByLabel("Dimensions").getByText("evidence:test-file").first(),
   ).toBeVisible();
+
+  await page.reload();
+
+  await expect(
+    page.getByRole("heading", { name: "Evidence-backed report" }),
+  ).toBeVisible();
+  await expect(page.getByText("Follow-up").first()).toBeVisible();
 });
 
 test("starts a follow-up thread from the report view", async ({ page }) => {
@@ -38,4 +45,20 @@ test("starts a follow-up thread from the report view", async ({ page }) => {
   await expect(page.getByText("Evidence summary")).toBeVisible();
   await expect(page.getByText("Evidence-backed answer")).toBeVisible();
   await expect(page.getByText("Relevant evidence from").first()).toBeVisible();
+
+  await page.waitForFunction(() =>
+    window.localStorage
+      .getItem(
+        "repo-analyzer-green.follow-up:report:local-fixture:unknown:minimal-node-library:fixture",
+      )
+      ?.includes("Report: What should we inspect first?"),
+  );
+
+  await page.reload();
+
+  await expect(
+    page.getByText("Report: What should we inspect first?").first(),
+  ).toBeVisible();
+  await expect(page.getByText("Evidence summary")).toBeVisible();
+  await expect(page.getByText("Evidence-backed answer")).toBeVisible();
 });
