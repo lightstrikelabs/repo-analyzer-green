@@ -19,6 +19,7 @@ import {
 } from "../../../infrastructure/llm/openrouter-config";
 import { FakeReviewer } from "../../../infrastructure/reviewer/fake-reviewer";
 import { OpenRouterReviewer } from "../../../infrastructure/reviewer/openrouter-reviewer";
+import { OpenRouterReviewerFallback } from "../../../infrastructure/reviewer/openrouter-reviewer-fallback";
 import { StaticEvidenceReviewer } from "../../../infrastructure/reviewer/static-evidence-reviewer";
 import {
   RepositorySourceError,
@@ -362,8 +363,11 @@ function reviewerFor(
   options: AnalyzeRouteOptions,
 ): Reviewer {
   if (options.openRouterConfig !== undefined) {
-    return new OpenRouterReviewer({
-      config: options.openRouterConfig,
+    return new OpenRouterReviewerFallback({
+      primary: new OpenRouterReviewer({
+        config: options.openRouterConfig,
+      }),
+      fallback: new StaticEvidenceReviewer(),
     });
   }
 

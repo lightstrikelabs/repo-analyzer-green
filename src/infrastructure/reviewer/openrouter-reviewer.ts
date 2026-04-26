@@ -158,16 +158,103 @@ function promptInput(
 }
 
 function parseJson(content: string): JsonParseResult {
-  try {
-    return {
-      success: true,
-      value: JSON.parse(content),
-    };
-  } catch {
-    return {
-      success: false,
-    };
+  for (const candidate of jsonCandidates(content)) {
+    try {
+      return {
+        success: true,
+        value: JSON.parse(candidate),
+      };
+    } catch {
+      continue;
+    }
   }
+
+  return {
+    success: false,
+  };
+}
+
+function jsonCandidates(content: string): readonly string[] {
+  const trimmed = content.trim();
+  const candidates = [trimmed];
+  const fencedContent = extractFencedContent(trimmed);
+
+  if (fencedContent !== undefined) {
+    candidates.push(fencedContent);
+  }
+
+  const objectContent = extractFirstJsonObject(trimmed);
+
+  if (objectContent !== undefined) {
+    candidates.push(objectContent);
+  }
+
+  return [...new Set(candidates)];
+}
+
+function extractFencedContent(content: string): string | undefined {
+  const match = /^```(?:json)?\s*([\s\S]*?)\s*```$/iu.exec(content);
+  return match?.[1]?.trim();
+}
+
+function extractFirstJsonObject(content: string): string | undefined {
+  let startIndex: number | undefined;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const character = content[index];
+
+    if (character === undefined) {
+      continue;
+    }
+
+    if (startIndex === undefined) {
+      if (character === "{") {
+        startIndex = index;
+        depth = 1;
+      }
+      continue;
+    }
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (character === "\\") {
+        escaped = true;
+        continue;
+      }
+
+      if (character === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (character === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (character === "{") {
+      depth += 1;
+      continue;
+    }
+
+    if (character === "}") {
+      depth -= 1;
+
+      if (depth === 0) {
+        return content.slice(startIndex, index + 1);
+      }
+    }
+  }
+
+  return undefined;
 }
 
 function malformedResponse(options: {
