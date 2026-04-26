@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import { z } from "zod";
 
 import type { EvidenceReference } from "../shared/evidence-reference";
@@ -407,7 +405,7 @@ function workflowPurpose(file: ManifestWorkflowFileSnapshot): WorkflowPurpose {
 function unsupportedManifestForFile(
   file: ManifestWorkflowFileSnapshot,
 ): UnsupportedManifestNote | undefined {
-  const basename = path.posix.basename(file.path);
+  const basename = basenameForPath(file.path);
   const definition =
     unsupportedManifestDefinitions.get(basename) ??
     unsupportedManifestDefinitionFromExtension(file.path);
@@ -518,7 +516,7 @@ function unsupportedManifestReference(filePath: string): EvidenceReference {
 }
 
 function isPackageJsonPath(filePath: string): boolean {
-  return path.posix.basename(filePath) === "package.json";
+  return basenameForPath(filePath) === "package.json";
 }
 
 function isGithubWorkflowPath(filePath: string): boolean {
@@ -526,14 +524,28 @@ function isGithubWorkflowPath(filePath: string): boolean {
 }
 
 function workflowName(filePath: string): string {
-  const basename = path.posix.basename(filePath);
-  const extension = path.posix.extname(basename);
+  const basename = basenameForPath(filePath);
+  const extension = extensionForPath(basename);
 
   return basename.slice(0, basename.length - extension.length);
 }
 
 function normalizePath(filePath: string): string {
   return filePath.replaceAll("\\", "/").replace(/^\.\//u, "");
+}
+
+function basenameForPath(filePath: string): string {
+  return normalizePath(filePath).split("/").at(-1) ?? filePath;
+}
+
+function extensionForPath(filePath: string): string {
+  const extensionStart = filePath.lastIndexOf(".");
+
+  if (extensionStart <= 0) {
+    return "";
+  }
+
+  return filePath.slice(extensionStart);
 }
 
 function compareFilesByPath(
