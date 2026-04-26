@@ -7,7 +7,10 @@ import type {
 } from "../../../application/analyze-repository/analyze-repository";
 import { buildAnalyzeRepositoryResponse } from "../../../application/analyze-repository/analyze-repository-response";
 import { RepositorySourceError } from "../../../domain/repository/repository-source";
-import { OpenRouterDefaultBaseUrl } from "../../../infrastructure/llm/openrouter-config";
+import {
+  OpenRouterDefaultBaseUrl,
+  OpenRouterDefaultModelId,
+} from "../../../infrastructure/llm/openrouter-config";
 import { handleAnalyzeRequest, type AnalyzeRouteOptions } from "./route";
 
 const validRequestBody = {
@@ -235,6 +238,28 @@ describe("POST /api/analyze", () => {
 
     expect(response.status).toBe(200);
     expect(receivedOptions).toEqual({});
+  });
+
+  it("defaults request-scoped reviewer config to GPT-5 Mini when no model is supplied", async () => {
+    let receivedOptions: AnalyzeRouteOptions | undefined;
+
+    const response = await handleAnalyzeRequest(
+      jsonRequest({
+        repoUrl: "https://github.com/lightstrikelabs/repo-analyzer-green",
+        apiKey: "sk-or-v1-test",
+      }),
+      {
+        analyze: async (_input, options) => {
+          receivedOptions = options;
+          return reportResult;
+        },
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(receivedOptions?.openRouterConfig).toMatchObject({
+      model: OpenRouterDefaultModelId,
+    });
   });
 
   it("rejects red-style requests that are not GitHub repository URLs", async () => {

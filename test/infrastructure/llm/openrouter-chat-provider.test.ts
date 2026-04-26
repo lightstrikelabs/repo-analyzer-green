@@ -149,8 +149,7 @@ describe("OpenRouterChatCompletionProvider", () => {
       model: OpenRouterDefaultModelId,
       code: "provider-error",
       status: 429,
-      userFacingCaveat:
-        "OpenRouter reviewer output is unavailable because OpenRouter returned status 429 for openrouter/free. The selected model or account may be rate limited; retry later or choose another structured-output-capable model.",
+      userFacingCaveat: `OpenRouter reviewer output is unavailable because OpenRouter returned status 429 for ${OpenRouterDefaultModelId}. The selected model or account may be rate limited; retry later or choose another structured-output-capable model.`,
     });
   });
 
@@ -177,8 +176,7 @@ describe("OpenRouterChatCompletionProvider", () => {
       provider: "openrouter",
       model: OpenRouterDefaultModelId,
       code: "network-error",
-      userFacingCaveat:
-        "OpenRouter reviewer output is unavailable because the network request to OpenRouter could not be completed for openrouter/free. Retry the request; if it persists, choose another structured-output-capable model or check provider connectivity.",
+      userFacingCaveat: `OpenRouter reviewer output is unavailable because the network request to OpenRouter could not be completed for ${OpenRouterDefaultModelId}. Retry the request; if it persists, choose another structured-output-capable model or check provider connectivity.`,
     });
   });
 

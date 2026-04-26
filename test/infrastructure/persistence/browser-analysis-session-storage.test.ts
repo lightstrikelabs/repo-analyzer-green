@@ -98,7 +98,7 @@ describe("browser-analysis-session-storage", () => {
     expect(loadBrowserLocalSession(storage)).toBeNull();
   });
 
-  it("defaults to an empty repo URL and the free router model", () => {
+  it("defaults to an empty repo URL and GPT-5 Mini", () => {
     expect(defaultBrowserRepositoryForm()).toEqual({
       repoUrl: "",
       selectedModel: OpenRouterDefaultModelId,

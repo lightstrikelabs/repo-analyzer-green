@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   OpenRouterDefaultModelId,
+  OpenRouterFreeModelId,
   OpenRouterModelIdSchema,
   OpenRouterProviderConfigSchema,
   OpenRouterRequestMetadataSchema,
@@ -9,12 +10,20 @@ import {
 } from "../../../src/infrastructure/llm/openrouter-config";
 
 describe("OpenRouter provider configuration", () => {
-  it("defaults empty model input to the documented free model", () => {
+  it("defaults empty model input to GPT-5 Mini", () => {
+    expect(OpenRouterDefaultModelId).toBe("openai/gpt-5-mini");
     expect(OpenRouterModelIdSchema.parse(undefined)).toBe(
       OpenRouterDefaultModelId,
     );
     expect(OpenRouterModelIdSchema.parse("")).toBe(OpenRouterDefaultModelId);
     expect(OpenRouterModelIdSchema.parse("   ")).toBe(OpenRouterDefaultModelId);
+  });
+
+  it("keeps the free router model available as an explicit option", () => {
+    expect(OpenRouterFreeModelId).toBe("openrouter/free");
+    expect(OpenRouterModelIdSchema.parse(OpenRouterFreeModelId)).toBe(
+      OpenRouterFreeModelId,
+    );
   });
 
   it("trims provided model ids and rejects whitespace inside ids", () => {

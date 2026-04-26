@@ -15,6 +15,7 @@ import {
 import { GitHubRepositoryUrlSchema } from "../../infrastructure/github/github-repository-url";
 import {
   OpenRouterDefaultModelId,
+  OpenRouterFreeModelId,
   OpenRouterModelIdSchema,
 } from "../../infrastructure/llm/openrouter-config";
 import {
@@ -291,7 +292,7 @@ export function AnalyzeRepositoryPanel() {
               <summary className="cursor-pointer text-sm font-semibold text-slate-800">
                 Advanced
               </summary>
-              <div className="mt-3 grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[minmax(220px,420px)_auto]">
+              <div className="mt-3 grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[minmax(220px,420px)_auto_auto]">
                 <Field label="OpenRouter Model">
                   <input
                     value={repositoryForm.selectedModel}
@@ -311,6 +312,19 @@ export function AnalyzeRepositoryPanel() {
                     updateRepositoryForm((current) => ({
                       ...current,
                       selectedModel: OpenRouterDefaultModelId,
+                    }))
+                  }
+                  disabled={status.kind === "loading"}
+                  className="h-10 self-end rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                >
+                  Use GPT-5 Mini
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateRepositoryForm((current) => ({
+                      ...current,
+                      selectedModel: OpenRouterFreeModelId,
                     }))
                   }
                   disabled={status.kind === "loading"}

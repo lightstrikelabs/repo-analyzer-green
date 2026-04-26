@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-export const OpenRouterDefaultModelId = "openrouter/free";
+export const OpenRouterDefaultModelId = "openai/gpt-5-mini";
+export const OpenRouterFreeModelId = "openrouter/free";
+export const OpenRouterFallbackModelId = "openai/gpt-4.1-mini";
 export const OpenRouterDefaultBaseUrl = "https://openrouter.ai/api/v1";
 
 export const OpenRouterModelIdSchema = z.preprocess(
