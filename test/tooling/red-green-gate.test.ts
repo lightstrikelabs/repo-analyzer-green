@@ -40,10 +40,32 @@ function runHook(
   });
 }
 
+function runCommitGate(options: {
+  readonly projectDir: string;
+}): ReturnType<typeof spawnSync> {
+  return spawnSync(process.execPath, [scriptPath, "--staged"], {
+    cwd: options.projectDir,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      CLAUDE_PROJECT_DIR: options.projectDir,
+    },
+  });
+}
+
 function makeProjectDir(): string {
   const dir = mkdtempSync(path.join(tmpdir(), "green-rg-"));
   mkdirSync(path.join(dir, "src"), { recursive: true });
   mkdirSync(path.join(dir, "docs"), { recursive: true });
+  spawnSync("git", ["init"], { cwd: dir, encoding: "utf8" });
+  spawnSync("git", ["config", "user.email", "test@example.com"], {
+    cwd: dir,
+    encoding: "utf8",
+  });
+  spawnSync("git", ["config", "user.name", "Test User"], {
+    cwd: dir,
+    encoding: "utf8",
+  });
   return dir;
 }
 
@@ -348,6 +370,110 @@ describe("red-green-gate CLI", () => {
         },
         { projectDir },
       );
+
+      expect(result.status).toBe(0);
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+});
+
+describe("red-green-gate staged commit gate", () => {
+  it("blocks a staged source file when the colocated test file is not staged", () => {
+    const projectDir = makeProjectDir();
+    try {
+      writeFileSync(
+        path.join(projectDir, "src/foo.tsx"),
+        "export const a = 1;\n",
+      );
+      spawnSync("git", ["add", "src/foo.tsx"], {
+        cwd: projectDir,
+        encoding: "utf8",
+      });
+
+      const result = runCommitGate({ projectDir });
+
+      expect(result.status).toBe(2);
+      expect(result.stderr).toMatch(/colocated test/i);
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("allows a staged source file when the colocated test file is staged too", () => {
+    const projectDir = makeProjectDir();
+    try {
+      writeFileSync(
+        path.join(projectDir, "src/foo.tsx"),
+        "export const a = 1;\n",
+      );
+      writeFileSync(
+        path.join(projectDir, "src/foo.test.tsx"),
+        "import { it } from 'vitest';\nit('a', () => {});\n",
+      );
+      spawnSync("git", ["add", "src/foo.tsx", "src/foo.test.tsx"], {
+        cwd: projectDir,
+        encoding: "utf8",
+      });
+
+      const result = runCommitGate({ projectDir });
+
+      expect(result.status).toBe(0);
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("allows allowlisted staged files without a paired test", () => {
+    const projectDir = makeProjectDir();
+    try {
+      writeFileSync(path.join(projectDir, "docs/note.md"), "# note\n");
+      spawnSync("git", ["add", "docs/note.md"], {
+        cwd: projectDir,
+        encoding: "utf8",
+      });
+
+      const result = runCommitGate({ projectDir });
+
+      expect(result.status).toBe(0);
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("allows a staged source file when the inline exemption marker is present", () => {
+    const projectDir = makeProjectDir();
+    try {
+      writeFileSync(
+        path.join(projectDir, "src/foo.tsx"),
+        "// red-green:exempt — config-only change\nexport const a = 1;\n",
+      );
+      spawnSync("git", ["add", "src/foo.tsx"], {
+        cwd: projectDir,
+        encoding: "utf8",
+      });
+
+      const result = runCommitGate({ projectDir });
+
+      expect(result.status).toBe(0);
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("allows a staged YAML hook config file when the inline exemption marker is present", () => {
+    const projectDir = makeProjectDir();
+    try {
+      writeFileSync(
+        path.join(projectDir, "lefthook.yml"),
+        "# red-green:exempt — hook wiring is tooling-only\npre-commit:\n  commands: {}\n",
+      );
+      spawnSync("git", ["add", "lefthook.yml"], {
+        cwd: projectDir,
+        encoding: "utf8",
+      });
+
+      const result = runCommitGate({ projectDir });
 
       expect(result.status).toBe(0);
     } finally {

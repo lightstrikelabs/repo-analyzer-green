@@ -794,7 +794,7 @@ Acceptance criteria:
 - CI command runs lint, format check, typecheck, unit tests, build, and foundational E2E
 - GitHub Actions workflow is planned for the CI command
 - Local hook runner is selected, with Lefthook preferred
-- Pre-commit hook plan covers staged formatting/linting and forbidden type-escape checks
+- Pre-commit hook plan covers staged formatting/linting, forbidden type-escape checks, and the shared red-green commit gate
 - Pre-push hook plan covers the local `check` command
 - Commit-msg hook plan enforces Conventional Commit subjects
 - PR title or squash-merge title check enforces Conventional Commit format in CI

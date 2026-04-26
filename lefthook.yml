@@ -1,5 +1,8 @@
+# red-green:exempt — commit hook configuration is tooling-only and validated through the shared gate tests
 pre-commit:
   commands:
+    red-green-gate:
+      run: node scripts/red-green-gate.ts --staged
     type-escape-check:
       run: pnpm run type-escape:check
     barrel-files-check:
