@@ -32,6 +32,12 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
 
+      - name: Check PR title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: node scripts/check-commit-message.ts --message "$PR_TITLE"
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

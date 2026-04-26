@@ -1,11 +1,29 @@
 #!/usr/bin/env node
 
 import { readdir, readFile, stat } from "node:fs/promises";
+import type { Dirent } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const sourceExtensions = new Set([".cts", ".mts", ".ts", ".tsx"]);
-const ignoredDirectoryNames = new Set([
+type ForbiddenPattern = {
+  readonly name: string;
+  readonly regex: RegExp;
+};
+
+type SourceLocation = {
+  readonly line: number;
+  readonly column: number;
+};
+
+type TypeEscapeViolation = SourceLocation & {
+  readonly filePath: string;
+  readonly pattern: string;
+};
+
+type ScannerState = "code" | "lineComment" | "blockComment" | "string";
+
+const sourceExtensions = new Set<string>([".cts", ".mts", ".ts", ".tsx"]);
+const ignoredDirectoryNames = new Set<string>([
   ".git",
   ".next",
   "build",
@@ -14,20 +32,20 @@ const ignoredDirectoryNames = new Set([
   "node_modules",
   "test-results",
 ]);
-const ignoredFileNames = new Set([
+const ignoredFileNames = new Set<string>([
   "package-lock.json",
   "pnpm-lock.yaml",
   "yarn.lock",
 ]);
-const defaultIgnoredRelativePaths = new Set([
+const defaultIgnoredRelativePaths = new Set<string>([
   "test/fixtures/type-escapes/rejected",
 ]);
 const marker = "type-escape:";
 const markerLookbackLineCount = 3;
 const anyKeyword = "any";
-const patternLabel = (parts) => parts.join(" ");
+const patternLabel = (parts: readonly string[]): string => parts.join(" ");
 
-const forbiddenPatterns = [
+const forbiddenPatterns: readonly ForbiddenPattern[] = [
   {
     name: patternLabel(["as", anyKeyword]),
     regex: /\bas\s+any\b/g,
@@ -50,13 +68,13 @@ const args = process.argv.slice(2);
 const root = process.cwd();
 const explicitTargets = args.length > 0;
 const targets = explicitTargets ? args : ["."];
-const files = [];
+const files: string[] = [];
 
 for (const target of targets) {
   await collectFiles(path.resolve(root, target), explicitTargets);
 }
 
-const violations = [];
+const violations: TypeEscapeViolation[] = [];
 
 for (const filePath of files) {
   const text = await readFile(filePath, "utf8");
@@ -77,7 +95,10 @@ if (violations.length > 0) {
   process.exitCode = 1;
 }
 
-async function collectFiles(targetPath, includeDefaultFixtureExamples) {
+async function collectFiles(
+  targetPath: string,
+  includeDefaultFixtureExamples: boolean,
+): Promise<void> {
   const targetStat = await stat(targetPath);
 
   if (targetStat.isDirectory()) {
@@ -97,7 +118,11 @@ async function collectFiles(targetPath, includeDefaultFixtureExamples) {
   }
 }
 
-function shouldIgnorePath(entryPath, entry, includeDefaultFixtureExamples) {
+function shouldIgnorePath(
+  entryPath: string,
+  entry: Dirent,
+  includeDefaultFixtureExamples: boolean,
+): boolean {
   if (entry.isDirectory() && ignoredDirectoryNames.has(entry.name)) {
     return true;
   }
@@ -113,14 +138,14 @@ function shouldIgnorePath(entryPath, entry, includeDefaultFixtureExamples) {
   return defaultIgnoredRelativePaths.has(toRelativePath(entryPath));
 }
 
-function shouldScanFile(filePath) {
+function shouldScanFile(filePath: string): boolean {
   return sourceExtensions.has(path.extname(filePath));
 }
 
-function findViolations(filePath, text) {
+function findViolations(filePath: string, text: string): TypeEscapeViolation[] {
   const maskedText = maskCommentsAndStrings(text);
   const rawLines = text.split(/\r?\n/);
-  const found = [];
+  const found: TypeEscapeViolation[] = [];
 
   for (const pattern of forbiddenPatterns) {
     for (const match of maskedText.matchAll(pattern.regex)) {
@@ -150,10 +175,10 @@ function findViolations(filePath, text) {
   });
 }
 
-function maskCommentsAndStrings(text) {
+function maskCommentsAndStrings(text: string): string {
   let masked = "";
   let index = 0;
-  let state = "code";
+  let state: ScannerState = "code";
   let quote = "";
 
   while (index < text.length) {
@@ -185,7 +210,7 @@ function maskCommentsAndStrings(text) {
 
     if (state === "string") {
       if (current === "\\") {
-        masked += current === "\n" ? "\n" : " ";
+        masked += " ";
         if (next !== "") {
           masked += next === "\n" ? "\n" : " ";
         }
@@ -235,7 +260,7 @@ function maskCommentsAndStrings(text) {
   return masked;
 }
 
-function locationForIndex(text, matchIndex) {
+function locationForIndex(text: string, matchIndex: number): SourceLocation {
   let line = 1;
   let lastLineStart = 0;
 
@@ -252,14 +277,17 @@ function locationForIndex(text, matchIndex) {
   };
 }
 
-function hasNearbyMarker(lines, oneBasedLineNumber) {
+function hasNearbyMarker(
+  lines: readonly string[],
+  oneBasedLineNumber: number,
+): boolean {
   const lineIndex = oneBasedLineNumber - 1;
   const firstLineIndex = Math.max(0, lineIndex - markerLookbackLineCount);
   const candidateLines = lines.slice(firstLineIndex, lineIndex + 1);
   return candidateLines.some((line) => isMarkerComment(line));
 }
 
-function isMarkerComment(line) {
+function isMarkerComment(line: string): boolean {
   const markerIndex = line.indexOf(marker);
   if (markerIndex === -1) {
     return false;
@@ -273,6 +301,6 @@ function isMarkerComment(line) {
   );
 }
 
-function toRelativePath(filePath) {
+function toRelativePath(filePath: string): string {
   return path.relative(root, filePath).split(path.sep).join("/");
 }

@@ -7,7 +7,7 @@ const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../..",
 );
-const scriptPath = path.join(repoRoot, "scripts/check-type-escapes.mjs");
+const scriptPath = path.join(repoRoot, "scripts/check-type-escapes.ts");
 
 function runGuard(targets: ReadonlyArray<string> = []) {
   return spawnSync(process.execPath, [scriptPath, ...targets], {
