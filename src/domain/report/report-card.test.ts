@@ -5,8 +5,8 @@ import {
   ReportCardSchema,
   ReportCardSchemaVersion,
   ReviewerMetadataSchema,
-} from "../../../src/domain/report/report-card";
-import { EvidenceReferenceSchema } from "../../../src/domain/shared/evidence-reference";
+} from "./report-card";
+import { EvidenceReferenceSchema } from "../shared/evidence-reference";
 
 const highConfidence = {
   level: "high",

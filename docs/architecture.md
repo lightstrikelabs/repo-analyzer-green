@@ -236,6 +236,42 @@ Test layers:
 - Fixture tests across repo archetypes
 - One foundational Playwright E2E test for the core analysis/report/chat path
 
+### Test Placement
+
+Use a hybrid placement strategy.
+
+Colocate narrow unit and domain tests with the source module they specify:
+
+```text
+src/domain/report/report-card.ts
+src/domain/report/report-card.test.ts
+src/domain/scoring/scoring-policy.ts
+src/domain/scoring/scoring-policy.test.ts
+```
+
+Keep broader harness-oriented tests outside `src`:
+
+```text
+test/fixtures/
+test/infrastructure/
+test/tooling/
+test/contracts/
+e2e/
+```
+
+Rationale:
+- Co-located domain tests keep red/green/refactor tight and make behavior examples visible next to the model or policy.
+- External integration and fixture tests keep cross-module scenarios, filesystem fixtures, tooling checks, and browser workflows out of production source directories.
+- Shared fixtures are test harness assets, not domain code.
+
+Default placement:
+- Domain value objects, schemas, policies, and domain services: colocated `*.test.ts`
+- Application use cases with fake ports: colocated when the test is narrow, `test/application/` when it spans multiple adapters or fixtures
+- Infrastructure adapters: `test/infrastructure/`
+- Fixture registry and fixture maintenance checks: `test/fixtures/`
+- Tooling scripts: `test/tooling/`
+- Browser workflows: `e2e/`
+
 Recommended scripts:
 
 ```json

@@ -39,6 +39,13 @@ If a task conflicts with those documents, call out the conflict before editing. 
 - Keep the foundational E2E test stable, deterministic, and independent of paid/network model calls.
 - Use fake or fixture-backed adapters where needed.
 
+## Test Placement
+
+- Colocate narrow unit and domain tests with the source module using `*.test.ts`.
+- Keep integration, fixture, contract, tooling, and browser E2E tests in `test/` or `e2e/`.
+- When adding domain behavior, start red/green/refactor next to the model, value object, policy, or domain service being changed.
+- Do not move shared fixtures into `src`; fixtures remain test harness assets.
+
 ## 4. Use PR Discipline
 
 - Always open PRs against an upstream branch.
