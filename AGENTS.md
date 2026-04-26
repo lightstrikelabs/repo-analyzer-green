@@ -15,6 +15,9 @@ If a task conflicts with those documents, call out the conflict before editing. 
 
 - Define the slice before changing code.
 - Keep each session and PR focused on one coherent outcome.
+- Default to one issue per PR and one PR per issue.
+- If an issue must be split across multiple PRs, document the sequence in the issue before opening follow-up PRs.
+- If multiple tiny issues must be bundled, document why in the PR body and keep the bundle within one coherent slice.
 - Do not bundle unrelated refactors, framework churn, or opportunistic cleanup into feature work.
 - If the scope needs to change, state the new scope explicitly before continuing.
 

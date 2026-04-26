@@ -493,6 +493,12 @@ The repository should include a pull request template that asks for:
 - Risk and rollback notes
 - Dependency additions and rationale
 
+Default PR mapping:
+- One issue per PR
+- One PR per issue
+- Split a large issue into multiple PRs only after documenting the sequence in the issue
+- Bundle multiple issues only when they are tiny, tightly related, and explicitly called out in the PR body
+
 ### Issue Template Requirements
 
 Issue templates should ask for:
