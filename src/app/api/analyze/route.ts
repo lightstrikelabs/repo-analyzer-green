@@ -9,19 +9,36 @@ import {
 } from "../../../application/analyze-repository/analyze-repository";
 import { buildAnalyzeRepositoryResponse } from "../../../application/analyze-repository/analyze-repository-response";
 import { LocalFixtureRepositorySource } from "../../../infrastructure/filesystem/local-fixture-repository-source";
+import { GitHubArchiveRepositorySource } from "../../../infrastructure/github/github-archive-repository-source";
+import { GitHubRepositoryUrlSchema } from "../../../infrastructure/github/github-repository-url";
+import {
+  OpenRouterDefaultBaseUrl,
+  OpenRouterDefaultModelId,
+  OpenRouterModelIdSchema,
+  type OpenRouterProviderConfig,
+} from "../../../infrastructure/llm/openrouter-config";
 import { FakeReviewer } from "../../../infrastructure/reviewer/fake-reviewer";
+import { OpenRouterReviewer } from "../../../infrastructure/reviewer/openrouter-reviewer";
+import { StaticEvidenceReviewer } from "../../../infrastructure/reviewer/static-evidence-reviewer";
 import {
   RepositorySourceError,
   type RepositoryReference,
+  type RepositorySource,
 } from "../../../domain/repository/repository-source";
+import type { Reviewer } from "../../../domain/reviewer/reviewer";
 import {
   ReviewerAssessmentSchemaVersion,
   type ReviewerAssessment,
 } from "../../../domain/reviewer/reviewer-assessment";
 
+export type AnalyzeRouteOptions = {
+  readonly openRouterConfig?: OpenRouterProviderConfig;
+};
+
 type AnalyzeRouteDependencies = {
   readonly analyze: (
     input: AnalyzeRepositoryInput,
+    options: AnalyzeRouteOptions,
   ) => Promise<AnalyzeRepositoryResult>;
 };
 
@@ -30,7 +47,7 @@ type ApiValidationIssue = {
   readonly message: string;
 };
 
-const AnalyzeRepositoryRequestSchema = z
+const StructuredAnalyzeRepositoryRequestSchema = z
   .object({
     repository: z
       .object({
@@ -44,7 +61,46 @@ const AnalyzeRepositoryRequestSchema = z
   })
   .strict();
 
-type AnalyzeRepositoryRequest = z.infer<typeof AnalyzeRepositoryRequestSchema>;
+const RedStyleAnalyzeRepositoryRequestSchema = z
+  .object({
+    repoUrl: GitHubRepositoryUrlSchema,
+    apiKey: z.preprocess(normalizeOptionalText, z.string().min(1).optional()),
+    model: OpenRouterModelIdSchema.optional(),
+  })
+  .strict();
+
+type StructuredAnalyzeRepositoryRequest = z.infer<
+  typeof StructuredAnalyzeRepositoryRequestSchema
+>;
+
+type RedStyleAnalyzeRepositoryRequest = z.infer<
+  typeof RedStyleAnalyzeRepositoryRequestSchema
+>;
+
+type ParsedAnalyzeRepositoryRequest =
+  | {
+      readonly kind: "structured";
+      readonly data: StructuredAnalyzeRepositoryRequest;
+    }
+  | {
+      readonly kind: "red-style";
+      readonly data: RedStyleAnalyzeRepositoryRequest;
+    };
+
+type AnalyzeRequestParseResult =
+  | {
+      readonly success: true;
+      readonly request: ParsedAnalyzeRepositoryRequest;
+    }
+  | {
+      readonly success: false;
+      readonly issues: readonly z.core.$ZodIssue[];
+    };
+
+type NormalizedAnalyzeRequest = {
+  readonly repository: RepositoryReference;
+  readonly options: AnalyzeRouteOptions;
+};
 
 export async function POST(request: Request): Promise<Response> {
   return handleAnalyzeRequest(request, {
@@ -65,20 +121,24 @@ export async function handleAnalyzeRequest(
     });
   }
 
-  const parseResult = AnalyzeRepositoryRequestSchema.safeParse(bodyResult.body);
+  const parseResult = parseAnalyzeRepositoryRequest(bodyResult.body);
 
   if (!parseResult.success) {
     return jsonError(400, {
       code: "invalid-request",
       message: "Request body did not match the analyze contract.",
-      issues: parseResult.error.issues.map(toApiValidationIssue),
+      issues: parseResult.issues.map(toApiValidationIssue),
     });
   }
+  const normalizedRequest = normalizeAnalyzeRequest(parseResult.request);
 
   try {
-    const result = await dependencies.analyze({
-      repository: toRepositoryReference(parseResult.data.repository),
-    });
+    const result = await dependencies.analyze(
+      {
+        repository: normalizedRequest.repository,
+      },
+      normalizedRequest.options,
+    );
 
     if (result.kind === "reviewer-malformed-response") {
       return jsonError(502, {
@@ -102,7 +162,7 @@ export async function handleAnalyzeRequest(
 }
 
 function toRepositoryReference(
-  repository: AnalyzeRepositoryRequest["repository"],
+  repository: StructuredAnalyzeRepositoryRequest["repository"],
 ): RepositoryReference {
   return {
     provider: repository.provider,
@@ -115,28 +175,89 @@ function toRepositoryReference(
   };
 }
 
+function parseAnalyzeRepositoryRequest(
+  body: unknown,
+): AnalyzeRequestParseResult {
+  if (typeof body === "object" && body !== null && "repoUrl" in body) {
+    const result = RedStyleAnalyzeRepositoryRequestSchema.safeParse(body);
+    return result.success
+      ? {
+          success: true,
+          request: {
+            kind: "red-style",
+            data: result.data,
+          },
+        }
+      : {
+          success: false,
+          issues: result.error.issues,
+        };
+  }
+
+  const result = StructuredAnalyzeRepositoryRequestSchema.safeParse(body);
+  return result.success
+    ? {
+        success: true,
+        request: {
+          kind: "structured",
+          data: result.data,
+        },
+      }
+    : {
+        success: false,
+        issues: result.error.issues,
+      };
+}
+
+function normalizeAnalyzeRequest(
+  request: ParsedAnalyzeRepositoryRequest,
+): NormalizedAnalyzeRequest {
+  if (request.kind === "structured") {
+    return {
+      repository: toRepositoryReference(request.data.repository),
+      options: {},
+    };
+  }
+
+  return {
+    repository: request.data.repoUrl,
+    options: openRouterRouteOptions(request.data),
+  };
+}
+
+function openRouterRouteOptions(
+  request: RedStyleAnalyzeRepositoryRequest,
+): AnalyzeRouteOptions {
+  if (request.apiKey === undefined) {
+    return {};
+  }
+
+  return {
+    openRouterConfig: {
+      provider: "openrouter",
+      apiKey: request.apiKey,
+      model: request.model ?? OpenRouterDefaultModelId,
+      baseUrl: OpenRouterDefaultBaseUrl,
+    },
+  };
+}
+
 async function analyzeWithDefaultDependencies(
   input: AnalyzeRepositoryInput,
+  options: AnalyzeRouteOptions,
 ): Promise<AnalyzeRepositoryResult> {
-  return analyzeRepository(input, {
-    repositorySource: new LocalFixtureRepositorySource({
-      fixtures: {
-        "minimal-node-library": {
-          id: "minimal-node-library",
-          rootPath: path.join(
-            process.cwd(),
-            "test/fixtures/repositories/minimal-node-library",
-          ),
-        },
-      },
-    }),
-    reviewer: new FakeReviewer({
-      result: {
-        kind: "assessment",
-        assessment: defaultReviewerAssessment,
-      },
-    }),
-  });
+  const repositorySource = repositorySourceFor(input.repository);
+
+  try {
+    return await analyzeRepository(input, {
+      repositorySource,
+      reviewer: reviewerFor(input.repository, options),
+    });
+  } finally {
+    if (repositorySource instanceof GitHubArchiveRepositorySource) {
+      await repositorySource.dispose();
+    }
+  }
 }
 
 function repositorySourceErrorResponse(error: RepositorySourceError): Response {
@@ -214,6 +335,57 @@ function jsonError(
       status,
     },
   );
+}
+
+function repositorySourceFor(
+  repository: RepositoryReference,
+): RepositorySource {
+  if (repository.provider === "github") {
+    return new GitHubArchiveRepositorySource();
+  }
+
+  return new LocalFixtureRepositorySource({
+    fixtures: {
+      "minimal-node-library": {
+        id: "minimal-node-library",
+        rootPath: path.join(
+          process.cwd(),
+          "test/fixtures/repositories/minimal-node-library",
+        ),
+      },
+    },
+  });
+}
+
+function reviewerFor(
+  repository: RepositoryReference,
+  options: AnalyzeRouteOptions,
+): Reviewer {
+  if (options.openRouterConfig !== undefined) {
+    return new OpenRouterReviewer({
+      config: options.openRouterConfig,
+    });
+  }
+
+  if (repository.provider === "github") {
+    return new StaticEvidenceReviewer();
+  }
+
+  return new FakeReviewer({
+    result: {
+      kind: "assessment",
+      assessment: defaultReviewerAssessment,
+    },
+  });
+}
+
+function normalizeOptionalText(value: unknown): unknown {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  return trimmed === "" ? undefined : trimmed;
 }
 
 const defaultReviewerAssessment: ReviewerAssessment = {

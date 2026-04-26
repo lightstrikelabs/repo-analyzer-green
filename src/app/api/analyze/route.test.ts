@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type {
   AnalyzeRepositoryReportCardResult,
+  AnalyzeRepositoryInput,
   AnalyzeRepositoryResult,
 } from "../../../application/analyze-repository/analyze-repository";
 import { buildAnalyzeRepositoryResponse } from "../../../application/analyze-repository/analyze-repository-response";
 import { RepositorySourceError } from "../../../domain/repository/repository-source";
-import { handleAnalyzeRequest } from "./route";
+import { OpenRouterDefaultBaseUrl } from "../../../infrastructure/llm/openrouter-config";
+import { handleAnalyzeRequest, type AnalyzeRouteOptions } from "./route";
 
 const validRequestBody = {
   repository: {
@@ -173,6 +175,86 @@ const reportResult: AnalyzeRepositoryReportCardResult = {
 };
 
 describe("POST /api/analyze", () => {
+  it("accepts red-style GitHub repository URL requests with reviewer config", async () => {
+    let received:
+      | {
+          readonly input: AnalyzeRepositoryInput;
+          readonly options: AnalyzeRouteOptions;
+        }
+      | undefined;
+
+    const response = await handleAnalyzeRequest(
+      jsonRequest({
+        repoUrl: "https://github.com/lightstrikelabs/repo-analyzer-green",
+        apiKey: " sk-or-v1-test ",
+        model: "openai/gpt-4.1-mini",
+      }),
+      {
+        analyze: async (input, options) => {
+          received = { input, options };
+          return reportResult;
+        },
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(received).toEqual({
+      input: {
+        repository: {
+          provider: "github",
+          owner: "lightstrikelabs",
+          name: "repo-analyzer-green",
+          url: "https://github.com/lightstrikelabs/repo-analyzer-green",
+        },
+      },
+      options: {
+        openRouterConfig: {
+          provider: "openrouter",
+          apiKey: "sk-or-v1-test",
+          model: "openai/gpt-4.1-mini",
+          baseUrl: OpenRouterDefaultBaseUrl,
+        },
+      },
+    });
+  });
+
+  it("accepts red-style GitHub repository URL requests without persisting reviewer credentials", async () => {
+    let receivedOptions: AnalyzeRouteOptions | undefined;
+
+    const response = await handleAnalyzeRequest(
+      jsonRequest({
+        repoUrl: "https://github.com/lightstrikelabs/repo-analyzer-green",
+      }),
+      {
+        analyze: async (_input, options) => {
+          receivedOptions = options;
+          return reportResult;
+        },
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(receivedOptions).toEqual({});
+  });
+
+  it("rejects red-style requests that are not GitHub repository URLs", async () => {
+    const response = await handleAnalyzeRequest(
+      jsonRequest({
+        repoUrl: "https://gitlab.com/lightstrikelabs/repo-analyzer-green",
+      }),
+      {
+        analyze: async () => reportResult,
+      },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("invalid-request");
+    expect(body.error.issues[0]).toMatchObject({
+      path: ["repoUrl"],
+    });
+  });
+
   it("validates the request and returns the report card from the analyzer", async () => {
     const response = await handleAnalyzeRequest(jsonRequest(validRequestBody), {
       analyze: async () => reportResult,
