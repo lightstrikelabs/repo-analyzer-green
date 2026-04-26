@@ -7,6 +7,7 @@ import type {
   ReviewerResponseValidationIssue,
   ReviewerResult,
 } from "../../domain/reviewer/reviewer";
+import type { EvidenceReference } from "../../domain/shared/evidence-reference";
 import {
   renderReviewerPrompt,
   type ReviewerPromptInput,
@@ -18,6 +19,7 @@ import {
 import type { OpenRouterProviderConfig } from "../llm/openrouter-config";
 
 export const OpenRouterReviewerVersion = "openrouter-reviewer.v1";
+const DefaultReviewerMaxOutputTokens = 6_000;
 
 export type OpenRouterReviewerControls = OpenRouterChatCompletionControls & {
   readonly maxEvidenceSummaryCharacters?: number;
@@ -90,7 +92,10 @@ export class OpenRouterReviewer implements Reviewer {
     }
 
     const parsedAssessment = ReviewerAssessmentSchema.safeParse(
-      parsedJson.value,
+      normalizeReviewerAssessmentInput(
+        parsedJson.value,
+        request.evidenceReferences,
+      ),
     );
 
     if (!parsedAssessment.success) {
@@ -158,20 +163,256 @@ function promptInput(
 }
 
 function parseJson(content: string): JsonParseResult {
-  for (const candidate of jsonCandidates(content)) {
+  const candidates = [...jsonCandidates(content)];
+  const seenCandidates = new Set(candidates);
+  let lastParsedValue: unknown;
+
+  for (let index = 0; index < candidates.length; index += 1) {
+    const candidate = candidates[index];
+
+    if (candidate === undefined) {
+      continue;
+    }
+
     try {
+      const value = normalizeParsedJsonValue(JSON.parse(candidate));
+      lastParsedValue = value;
+
+      if (typeof value === "string") {
+        for (const nestedCandidate of jsonCandidates(value)) {
+          if (!seenCandidates.has(nestedCandidate)) {
+            seenCandidates.add(nestedCandidate);
+            candidates.push(nestedCandidate);
+          }
+        }
+        continue;
+      }
+
       return {
         success: true,
-        value: JSON.parse(candidate),
+        value,
       };
     } catch {
       continue;
     }
   }
 
+  if (lastParsedValue !== undefined) {
+    return {
+      success: true,
+      value: lastParsedValue,
+    };
+  }
+
   return {
     success: false,
   };
+}
+
+function normalizeParsedJsonValue(value: unknown): unknown {
+  return Array.isArray(value) && value.length === 1 ? value[0] : value;
+}
+
+function normalizeReviewerAssessmentInput(
+  value: unknown,
+  evidenceReferences: readonly EvidenceReference[],
+): unknown {
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  return {
+    ...value,
+    assessedArchetype: normalizeAssessedArchetypeRecord(
+      value.assessedArchetype,
+      evidenceReferences,
+    ),
+    dimensions: normalizeEvidenceReferencesRecords(
+      value.dimensions,
+      evidenceReferences,
+    ),
+    caveats: normalizeEvidenceReferencesRecords(
+      value.caveats,
+      evidenceReferences,
+    ),
+  };
+}
+
+function normalizeAssessedArchetypeRecord(
+  value: unknown,
+  evidenceReferences: readonly EvidenceReference[],
+): unknown {
+  const normalizedValue = normalizeEvidenceReferencesRecord(
+    value,
+    evidenceReferences,
+  );
+
+  if (!isRecord(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  return {
+    ...normalizedValue,
+    rationale:
+      typeof normalizedValue.rationale === "string" &&
+      normalizedValue.rationale.trim() !== ""
+        ? normalizedValue.rationale
+        : "Reviewer did not provide an archetype rationale; treat the archetype assessment as lower assurance.",
+  };
+}
+
+function normalizeEvidenceReferencesRecords(
+  value: unknown,
+  evidenceReferences: readonly EvidenceReference[],
+): unknown {
+  if (!Array.isArray(value)) {
+    return value;
+  }
+
+  return value.map((item) =>
+    normalizeEvidenceReferencesRecord(item, evidenceReferences),
+  );
+}
+
+function normalizeEvidenceReferencesRecord(
+  value: unknown,
+  evidenceReferences: readonly EvidenceReference[],
+): unknown {
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  return {
+    ...value,
+    confidence: normalizeConfidence(value.confidence),
+    evidenceReferences: normalizeEvidenceReferences(
+      value.evidenceReferences,
+      evidenceReferences,
+    ),
+  };
+}
+
+function normalizeConfidence(value: unknown): unknown {
+  if (!isRecord(value) || typeof value.rationale === "string") {
+    return value;
+  }
+
+  return {
+    ...value,
+    rationale:
+      "Reviewer did not provide a confidence rationale; treat this confidence as lower assurance.",
+  };
+}
+
+function normalizeEvidenceReferences(
+  value: unknown,
+  evidenceReferences: readonly EvidenceReference[],
+): unknown {
+  if (!Array.isArray(value)) {
+    return value;
+  }
+
+  return value.map((item) =>
+    normalizeEvidenceReference(item, evidenceReferences),
+  );
+}
+
+function normalizeEvidenceReference(
+  value: unknown,
+  evidenceReferences: readonly EvidenceReference[],
+): unknown {
+  if (typeof value === "string") {
+    return evidenceReferenceForReviewerText(value, evidenceReferences);
+  }
+
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  const normalizedReference = { ...value };
+  removeInvalidOptionalTextProperty(normalizedReference, "path");
+  removeInvalidOptionalTextProperty(normalizedReference, "notes");
+  removeInvalidOptionalLineProperty(normalizedReference, "lineStart");
+  removeInvalidOptionalLineProperty(normalizedReference, "lineEnd");
+  removeInvertedOptionalLineEnd(normalizedReference);
+  return normalizedReference;
+}
+
+function removeInvalidOptionalTextProperty(
+  record: Record<string, unknown>,
+  key: "notes" | "path",
+): void {
+  if (record[key] === undefined) {
+    return;
+  }
+
+  if (typeof record[key] !== "string" || record[key].trim() === "") {
+    delete record[key];
+  }
+}
+
+function removeInvalidOptionalLineProperty(
+  record: Record<string, unknown>,
+  key: "lineEnd" | "lineStart",
+): void {
+  if (record[key] === undefined) {
+    return;
+  }
+
+  if (
+    typeof record[key] !== "number" ||
+    !Number.isInteger(record[key]) ||
+    record[key] <= 0
+  ) {
+    delete record[key];
+  }
+}
+
+function removeInvertedOptionalLineEnd(record: Record<string, unknown>): void {
+  if (
+    typeof record.lineStart === "number" &&
+    typeof record.lineEnd === "number" &&
+    record.lineEnd < record.lineStart
+  ) {
+    delete record.lineEnd;
+  }
+}
+
+function evidenceReferenceForReviewerText(
+  text: string,
+  evidenceReferences: readonly EvidenceReference[],
+): EvidenceReference {
+  const matchingReference = evidenceReferences.find(
+    (reference) =>
+      reference.id === text ||
+      reference.label === text ||
+      reference.path === text,
+  );
+
+  if (matchingReference !== undefined) {
+    return matchingReference;
+  }
+
+  return {
+    id: `reviewer:${stableReferenceId(text)}`,
+    kind: "reviewer",
+    label: text,
+  };
+}
+
+function stableReferenceId(text: string): string {
+  const normalized = text
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+
+  return normalized === "" ? "reference" : normalized;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function jsonCandidates(content: string): readonly string[] {
@@ -272,41 +513,20 @@ function malformedResponse(options: {
 
 function chatControlsProperty(
   controls: OpenRouterReviewerControls | undefined,
-):
-  | { readonly controls: OpenRouterChatCompletionControls }
-  | Record<string, never> {
-  const chatCompletionControls = chatControls(controls);
-
-  if (chatCompletionControls === undefined) {
-    return {};
-  }
-
+): { readonly controls: OpenRouterChatCompletionControls } {
   return {
-    controls: chatCompletionControls,
+    controls: chatControls(controls),
   };
 }
 
 function chatControls(
   controls: OpenRouterReviewerControls | undefined,
-): OpenRouterChatCompletionControls | undefined {
-  if (controls === undefined) {
-    return undefined;
-  }
-
-  if (
-    controls.maxOutputTokens === undefined &&
-    controls.temperature === undefined
-  ) {
-    return undefined;
-  }
-
+): OpenRouterChatCompletionControls {
   return {
-    ...(controls.maxOutputTokens === undefined
-      ? {}
-      : { maxOutputTokens: controls.maxOutputTokens }),
-    ...(controls.temperature === undefined
-      ? {}
-      : { temperature: controls.temperature }),
+    maxOutputTokens:
+      controls?.maxOutputTokens ?? DefaultReviewerMaxOutputTokens,
+    responseFormat: controls?.responseFormat ?? "json_object",
+    temperature: controls?.temperature ?? 0,
   };
 }
 

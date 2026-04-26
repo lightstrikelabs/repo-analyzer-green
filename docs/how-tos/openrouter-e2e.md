@@ -65,6 +65,16 @@ OpenRouter configuration is parsed at the provider boundary in `src/infrastructu
 
 The OpenRouter chat provider returns typed provider failures instead of throwing provider details into the domain. Missing keys, network failures, non-2xx responses, invalid response shapes, and empty or reasoning-only responses should become user-facing caveats that say OpenRouter output is unavailable. Do not include raw provider error bodies or secret values in user-facing UI, persisted reports, traces, or PR/issue text.
 
+## Local Live Contract Check
+
+The normal test suite must not depend on live model calls. To verify the OpenRouter request contract locally, run the skipped-by-default live contract test with a request-scoped key:
+
+```bash
+OPENROUTER_API_KEY="<local key>" RUN_OPENROUTER_LIVE=1 pnpm vitest run test/infrastructure/llm/openrouter-live-contract.test.ts
+```
+
+This test uses `openai/gpt-4.1-mini`, requests JSON object output, and asserts that OpenRouter returns parseable JSON content. Do not commit keys, paste keys into issue bodies, or include raw provider responses in logs.
+
 ## Safety Rules
 
 - Keep the deterministic foundational E2E fake-backed.

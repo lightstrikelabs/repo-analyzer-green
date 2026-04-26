@@ -47,6 +47,10 @@ describe("OpenRouterChatCompletionProvider", () => {
       "Bearer sk-or-v1-request-scoped",
     );
     expect(request?.headers.get("content-type")).toBe("application/json");
+    expect(request?.headers.get("HTTP-Referer")).toBe(
+      "https://repo-analyzer-green.vercel.app",
+    );
+    expect(request?.headers.get("X-Title")).toBe("Repo Analyzer Green");
     expect(await request?.json()).toEqual({
       model: OpenRouterDefaultModelId,
       messages: [{ role: "user", content: "Review this evidence." }],
@@ -78,6 +82,7 @@ describe("OpenRouterChatCompletionProvider", () => {
       messages: [{ role: "user", content: "Review this evidence." }],
       controls: {
         maxOutputTokens: 1_500,
+        responseFormat: "json_object",
         temperature: 0,
       },
     });
@@ -87,6 +92,7 @@ describe("OpenRouterChatCompletionProvider", () => {
       messages: [{ role: "user", content: "Review this evidence." }],
       metadata: { usageContext: "reviewer-assessment" },
       max_tokens: 1_500,
+      response_format: { type: "json_object" },
       temperature: 0,
     });
   });
@@ -144,7 +150,35 @@ describe("OpenRouterChatCompletionProvider", () => {
       code: "provider-error",
       status: 429,
       userFacingCaveat:
-        "OpenRouter reviewer output is unavailable because the provider request failed.",
+        "OpenRouter reviewer output is unavailable because OpenRouter returned status 429 for openrouter/free. The selected model or account may be rate limited; retry later or choose another structured-output-capable model.",
+    });
+  });
+
+  it("maps network failures to retryable redacted diagnostics", async () => {
+    const provider = new OpenRouterChatCompletionProvider({
+      fetcher: async () => {
+        throw new TypeError("fetch failed");
+      },
+    });
+
+    await expect(
+      provider.complete({
+        config: {
+          provider: "openrouter",
+          apiKey: "sk-or-v1-request-scoped",
+          model: OpenRouterDefaultModelId,
+          baseUrl: "https://openrouter.ai/api/v1",
+        },
+        metadata: { usageContext: "reviewer-assessment" },
+        messages: [{ role: "user", content: "Review this evidence." }],
+      }),
+    ).resolves.toEqual({
+      kind: "provider-failure",
+      provider: "openrouter",
+      model: OpenRouterDefaultModelId,
+      code: "network-error",
+      userFacingCaveat:
+        "OpenRouter reviewer output is unavailable because the network request to OpenRouter could not be completed for openrouter/free. Retry the request; if it persists, choose another structured-output-capable model or check provider connectivity.",
     });
   });
 

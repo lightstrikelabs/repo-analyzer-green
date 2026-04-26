@@ -81,7 +81,7 @@ function fallbackCaveat(
   return {
     id: fallbackCaveatId,
     summary: providerFailure
-      ? "OpenRouter reviewer enrichment failed for the selected model, so the report falls back to deterministic static analysis. Try openai/gpt-4.1-mini or another structured-output-capable model."
+      ? `OpenRouter reviewer enrichment failed for ${modelLabel(malformedResponse)}, so the report falls back to deterministic static analysis. Try openai/gpt-4.1-mini or another structured-output-capable model.`
       : "OpenRouter reviewer output could not be parsed or validated, so the report falls back to deterministic static analysis while preserving validation details.",
     affectedDimensions: [...affectedDimensions],
     missingEvidence: providerFailure
@@ -123,4 +123,11 @@ function validationIssueMessages(
       malformedResponse.validationIssues.map((issue) => issue.message),
     ),
   ];
+}
+
+function modelLabel(malformedResponse: MalformedReviewerResponse): string {
+  return malformedResponse.reviewer.kind === "llm" &&
+    malformedResponse.reviewer.modelName !== undefined
+    ? malformedResponse.reviewer.modelName
+    : "the selected model";
 }

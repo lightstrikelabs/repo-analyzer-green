@@ -45,6 +45,11 @@ describe("renderReviewerPrompt", () => {
     expect(prompt.system).toContain(ReviewerAssessmentSchemaVersion);
     expect(prompt.system).toContain("Do not make unsupported claims");
     expect(prompt.system).toContain("Missing evidence is not a defect");
+    expect(prompt.system).toContain("copy complete EvidenceReference objects");
+    expect(prompt.system).toContain("Do not return string ids");
+    expect(prompt.system).toContain(
+      "Every confidence object must include a rationale string.",
+    );
     expect(prompt.system).toContain("follow-up questions");
     expect(prompt.user).toContain("lightstrikelabs/repo-analyzer-green");
     expect(prompt.user).toContain("Files analyzed: 42");
@@ -54,6 +59,9 @@ describe("renderReviewerPrompt", () => {
     );
     expect(prompt.responseContractJson).toContain(
       '"schemaVersion":"reviewer-assessment.v1"',
+    );
+    expect(prompt.responseContractJson).toContain(
+      '"evidenceReferences":[{"id":"evidence:id"',
     );
     expect(prompt.messages).toEqual([
       {
