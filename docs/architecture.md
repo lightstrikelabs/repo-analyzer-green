@@ -391,13 +391,18 @@ Non-trivial commits should include a body. Use a second `-m` when committing fro
 
 ```bash
 git commit -m "feat(chat): model targeted follow-up conversations" \
-  -m "Add conversation targets for report dimensions, findings, caveats, and evidence items. This keeps chat context explicit before persistence and auth are introduced."
+  -m "Add conversation targets for report dimensions, findings, caveats, and evidence items. This keeps chat context explicit before persistence and auth are introduced.
+
+Issue: #32
+PR: #58"
 ```
 
 Commit body expectations:
 - Explain why the change exists
 - Mention important tradeoffs or constraints
 - Mention test or migration implications when relevant
+- Include `Issue: #<number>`
+- Include `PR: #<number>` once the PR exists
 - Avoid repeating the subject
 
 Examples:
@@ -406,12 +411,18 @@ Examples:
 docs(architecture): define enforcement model
 
 Add CI, hook, branch-protection, and unsafe-type-escape standards so local agent work and GitHub enforcement share the same quality gate.
+
+Issue: #7
+PR: #50
 ```
 
 ```text
 test(domain): cover low-confidence reviewer caveats
 
 Prove that low-confidence reviewer claims reduce report confidence instead of becoming hard quality judgments. This protects the evidence-first report model.
+
+Issue: #19
+PR: #61
 ```
 
 Mechanical enforcement:

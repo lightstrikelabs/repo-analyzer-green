@@ -72,3 +72,4 @@ See [docs/development-plan.md](docs/development-plan.md) for the milestone and i
 See [docs/commit-messages.md](docs/commit-messages.md) for commit and PR title standards.
 See [docs/fixtures.md](docs/fixtures.md) for repository fixture rules.
 See [docs/architecture.md](docs/architecture.md#test-placement) for test placement rules.
+See [docs/deployment.md](docs/deployment.md) for Vercel deployment and preview E2E setup.

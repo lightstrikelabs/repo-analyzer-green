@@ -1,0 +1,53 @@
+name: Preview E2E
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+  deployments: read
+
+jobs:
+  preview-e2e:
+    name: Preview E2E
+    if: >
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment_status.environment_url != '' &&
+      github.event.deployment.production_environment == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.29.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        if: env.VERCEL_AUTOMATION_BYPASS_SECRET != ''
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Explain skipped protected preview E2E
+        if: env.VERCEL_AUTOMATION_BYPASS_SECRET == ''
+        run: |
+          echo "::notice title=Preview E2E skipped::Set the VERCEL_AUTOMATION_BYPASS_SECRET GitHub secret after enabling Vercel Protection Bypass for Automation to run Playwright against protected preview URLs."
+
+      - name: Run Playwright against preview
+        if: env.VERCEL_AUTOMATION_BYPASS_SECRET != ''
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.environment_url }}
+        run: pnpm test:e2e

@@ -34,15 +34,20 @@ Non-trivial commits should include a body. When committing from the command line
 
 ```bash
 git commit -m "feat(chat): model targeted follow-up conversations" \
-  -m "Add conversation targets for report dimensions, findings, caveats, and evidence items. This keeps chat context explicit before persistence and auth are introduced."
+  -m "Add conversation targets for report dimensions, findings, caveats, and evidence items. This keeps chat context explicit before persistence and auth are introduced.
+
+Issue: #32
+PR: #58"
 ```
 
 The body should explain:
 - Why the change exists
 - Important tradeoffs or constraints
 - Test, migration, or rollout implications when relevant
+- The GitHub issue number as `Issue: #<number>`
+- The GitHub pull request number as `PR: #<number>` once the PR exists
 
-Do not repeat the subject in the body.
+Do not repeat the subject in the body. If the PR number is not known before the first push, amend the commit body after opening the PR and force-push with lease.
 
 ## Examples
 
