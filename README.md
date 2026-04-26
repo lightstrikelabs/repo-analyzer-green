@@ -21,4 +21,42 @@ Repository Evidence
 - Structured reviewer assessments before final scoring
 - Explicit confidence and limitations in every report
 
+## Development Setup
+
+Prerequisites:
+
+- Node.js `24.x`, matching `.node-version`
+- pnpm `10.29.3`
+
+Install dependencies:
+
+```bash
+pnpm install
+```
+
+Run the app locally:
+
+```bash
+pnpm dev
+```
+
+Quality gates:
+
+```bash
+pnpm lint
+pnpm format:check
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm test:e2e
+```
+
+Full local CI-equivalent check:
+
+```bash
+pnpm ci
+```
+
+The scaffold intentionally contains only the application shell, architecture folders, and tooling. Repository analysis, reviewer assessment, persistence, auth, and deployment integrations are tracked as separate issues.
+
 See [docs/development-plan.md](docs/development-plan.md) for the milestone and issue plan.
