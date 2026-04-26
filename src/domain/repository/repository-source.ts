@@ -21,6 +21,7 @@ export type RepositoryFileProvenance = {
 
 export type RepositoryFileEntry = {
   readonly path: RepositoryPath;
+  readonly sizeBytes: number;
   readonly provenance: RepositoryFileProvenance;
 };
 
