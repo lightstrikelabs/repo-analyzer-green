@@ -11,6 +11,7 @@ import type {
   DashboardLanguageMixItem,
 } from "../../application/analyze-repository/analyze-repository-response";
 import { FollowUpPanel } from "../chat/follow-up-panel";
+import { PrintReportButton } from "./print-report-button";
 
 export function ReportCardView({
   analysis,
@@ -72,6 +73,7 @@ export function ReportCardView({
             Reviewer: {reportCard.reviewerMetadata.name}
           </p>
         </div>
+        <PrintReportButton />
       </header>
 
       <section

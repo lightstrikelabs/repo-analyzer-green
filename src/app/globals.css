@@ -10,3 +10,20 @@ body {
   color: #0f172a;
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media print {
+  @page {
+    margin: 0.5in;
+  }
+
+  article,
+  aside,
+  header,
+  section {
+    break-inside: avoid;
+  }
+
+  body {
+    background: #ffffff;
+  }
+}
