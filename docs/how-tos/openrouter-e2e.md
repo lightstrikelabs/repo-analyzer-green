@@ -54,6 +54,17 @@ E2E_TEST_REPOSITORY_URL: ${{ vars.E2E_TEST_REPOSITORY_URL }}
 
 The test should pass the key only through environment variables or request-scoped server-side configuration. It should not expose the key to browser localStorage, rendered HTML, screenshots, traces, or client-side logs.
 
+## Runtime Contract
+
+OpenRouter configuration is parsed at the provider boundary in `src/infrastructure/llm/openrouter-config.ts`.
+
+- `OPENROUTER_API_KEY` is request-scoped configuration. This slice does not store it.
+- Empty or missing model input defaults to `openrouter/free`.
+- Empty API key input is normalized to an unavailable provider configuration.
+- Provider request metadata stays in infrastructure and currently supports `reviewer-assessment` and `follow-up-answer` usage contexts.
+
+The OpenRouter chat provider returns typed provider failures instead of throwing provider details into the domain. Missing keys, network failures, non-2xx responses, invalid response shapes, and empty or reasoning-only responses should become user-facing caveats that say OpenRouter output is unavailable. Do not include raw provider error bodies or secret values in user-facing UI, persisted reports, traces, or PR/issue text.
+
 ## Safety Rules
 
 - Keep the deterministic foundational E2E fake-backed.
