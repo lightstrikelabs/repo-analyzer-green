@@ -7,8 +7,8 @@ import type {
   RepositoryPath,
   RepositoryReference,
   RepositorySource,
-} from "../../domain/repository";
-import { RepositorySourceError } from "../../domain/repository";
+} from "../../domain/repository/repository-source";
+import { RepositorySourceError } from "../../domain/repository/repository-source";
 
 export type LocalRepositoryFixture = {
   readonly id: string;

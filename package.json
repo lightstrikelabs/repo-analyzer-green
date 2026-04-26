@@ -15,6 +15,7 @@
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "type-escape:check": "node scripts/check-type-escapes.ts",
+    "barrel-files:check": "node scripts/check-barrel-files.ts",
     "commit-message:check": "node scripts/check-commit-message.ts",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
@@ -22,7 +23,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "check": "pnpm run type-escape:check && pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
+    "check": "pnpm run type-escape:check && pnpm run barrel-files:check && pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "ci": "pnpm check && pnpm build && pnpm test:e2e"
   },
   "dependencies": {
