@@ -144,4 +144,34 @@ describe("OpenRouterChatCompletionProvider", () => {
         "OpenRouter reviewer output is unavailable because the provider returned no usable message content.",
     });
   });
+
+  it("maps invalid JSON responses to typed provider failures", async () => {
+    const provider = new OpenRouterChatCompletionProvider({
+      fetcher: async () =>
+        new Response("{not json", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    });
+
+    await expect(
+      provider.complete({
+        config: {
+          provider: "openrouter",
+          apiKey: "sk-or-v1-request-scoped",
+          model: OpenRouterDefaultModelId,
+          baseUrl: "https://openrouter.ai/api/v1",
+        },
+        metadata: { usageContext: "reviewer-assessment" },
+        messages: [{ role: "user", content: "Review this evidence." }],
+      }),
+    ).resolves.toEqual({
+      kind: "provider-failure",
+      provider: "openrouter",
+      model: OpenRouterDefaultModelId,
+      code: "invalid-response",
+      userFacingCaveat:
+        "OpenRouter reviewer output is unavailable because the provider returned an unexpected response shape.",
+    });
+  });
 });

@@ -125,9 +125,20 @@ export class OpenRouterChatCompletionProvider {
       });
     }
 
-    const parsedResponse = OpenRouterChatProviderResponseSchema.safeParse(
-      await response.json(),
-    );
+    let responseBody: unknown;
+    try {
+      responseBody = await response.json();
+    } catch {
+      return providerFailure({
+        model: request.config.model,
+        code: "invalid-response",
+        userFacingCaveat:
+          "OpenRouter reviewer output is unavailable because the provider returned an unexpected response shape.",
+      });
+    }
+
+    const parsedResponse =
+      OpenRouterChatProviderResponseSchema.safeParse(responseBody);
 
     if (!parsedResponse.success) {
       return providerFailure({
