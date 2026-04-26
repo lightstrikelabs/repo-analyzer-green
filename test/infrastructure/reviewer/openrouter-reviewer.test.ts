@@ -158,7 +158,7 @@ describe("OpenRouterReviewer", () => {
     await reviewer.assess(request);
 
     expect(completionRequests[0]?.controls).toEqual({
-      maxOutputTokens: 6_000,
+      maxOutputTokens: 10_000,
       responseFormat: "json_object",
       temperature: 0,
     });

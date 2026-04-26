@@ -19,7 +19,7 @@ import {
 import type { OpenRouterProviderConfig } from "../llm/openrouter-config";
 
 export const OpenRouterReviewerVersion = "openrouter-reviewer.v1";
-const DefaultReviewerMaxOutputTokens = 6_000;
+const DefaultReviewerMaxOutputTokens = 10_000;
 
 export type OpenRouterReviewerControls = OpenRouterChatCompletionControls & {
   readonly maxEvidenceSummaryCharacters?: number;
