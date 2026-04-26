@@ -117,6 +117,7 @@ describe("OpenRouterReviewer", () => {
         repository: "local-fixture:minimal-node-library @ fixture",
       },
       max_tokens: 2_000,
+      response_format: { type: "json_object" },
       temperature: 0,
     });
     expect(body.messages).toHaveLength(2);
@@ -125,6 +126,42 @@ describe("OpenRouterReviewer", () => {
     expect(body.messages[1].content).toContain(
       "[Evidence summary truncated at 32 characters.]",
     );
+  });
+
+  it("requests structured JSON output with reviewer-safe defaults", async () => {
+    const requests: Parameters<OpenRouterReviewer["assess"]>[0][] = [];
+    const completionRequests: Parameters<
+      OpenRouterChatCompletionProvider["complete"]
+    >[0][] = [];
+    const reviewer = new OpenRouterReviewer({
+      chatProvider: {
+        complete: async (completionRequest) => {
+          completionRequests.push(completionRequest);
+          return {
+            kind: "completed",
+            provider: "openrouter",
+            model: OpenRouterDefaultModelId,
+            content: JSON.stringify(assessment),
+          };
+        },
+      },
+      config: {
+        provider: "openrouter",
+        apiKey: "sk-or-v1-test",
+        model: OpenRouterDefaultModelId,
+        baseUrl: "https://openrouter.ai/api/v1",
+      },
+      now: () => new Date("2026-04-26T12:00:00-07:00"),
+    });
+
+    requests.push(request);
+    await reviewer.assess(request);
+
+    expect(completionRequests[0]?.controls).toEqual({
+      maxOutputTokens: 10_000,
+      responseFormat: "json_object",
+      temperature: 0,
+    });
   });
 
   it("returns malformed-response when model content is not JSON", async () => {
@@ -184,6 +221,217 @@ describe("OpenRouterReviewer", () => {
     const result = await reviewer.assess(request);
 
     expect(result).toEqual({ kind: "assessment", assessment });
+  });
+
+  it("accepts reviewer JSON returned as a JSON-encoded string", async () => {
+    const reviewer = new OpenRouterReviewer({
+      chatProvider: completionProviderForContent(
+        JSON.stringify(JSON.stringify(assessment)),
+      ),
+      config: {
+        provider: "openrouter",
+        apiKey: "sk-or-v1-test",
+        model: OpenRouterDefaultModelId,
+        baseUrl: "https://openrouter.ai/api/v1",
+      },
+      now: () => new Date("2026-04-26T12:00:00-07:00"),
+    });
+
+    const result = await reviewer.assess(request);
+
+    expect(result).toEqual({ kind: "assessment", assessment });
+  });
+
+  it("accepts reviewer JSON wrapped in a single-item array", async () => {
+    const reviewer = new OpenRouterReviewer({
+      chatProvider: completionProviderForContent(JSON.stringify([assessment])),
+      config: {
+        provider: "openrouter",
+        apiKey: "sk-or-v1-test",
+        model: OpenRouterDefaultModelId,
+        baseUrl: "https://openrouter.ai/api/v1",
+      },
+      now: () => new Date("2026-04-26T12:00:00-07:00"),
+    });
+
+    const result = await reviewer.assess(request);
+
+    expect(result).toEqual({ kind: "assessment", assessment });
+  });
+
+  it("normalizes reviewer evidence reference strings against collected evidence", async () => {
+    const reviewer = new OpenRouterReviewer({
+      chatProvider: completionProviderForContent(
+        JSON.stringify({
+          ...assessment,
+          assessedArchetype: {
+            ...assessment.assessedArchetype,
+            evidenceReferences: ["evidence:package-json"],
+          },
+          dimensions: [
+            {
+              ...assessment.dimensions[0],
+              evidenceReferences: [
+                "test/add.spec.ts",
+                "Reviewer-only reference",
+              ],
+            },
+          ],
+          caveats: [
+            {
+              id: "caveat:reviewer-only",
+              summary: "Reviewer cited an unknown but useful reference.",
+              affectedDimensions: ["verifiability"],
+              missingEvidence: ["Additional test plan context"],
+              confidence: {
+                level: "medium",
+                score: 0.6,
+                rationale: "The reference came from reviewer output.",
+              },
+              evidenceReferences: ["Reviewer-only reference"],
+            },
+          ],
+        }),
+      ),
+      config: {
+        provider: "openrouter",
+        apiKey: "sk-or-v1-test",
+        model: OpenRouterDefaultModelId,
+        baseUrl: "https://openrouter.ai/api/v1",
+      },
+      now: () => new Date("2026-04-26T12:00:00-07:00"),
+    });
+
+    const result = await reviewer.assess(request);
+
+    expect(result.kind).toBe("assessment");
+    if (result.kind !== "assessment") {
+      throw new Error("Expected reviewer assessment");
+    }
+    expect(result.assessment.assessedArchetype.evidenceReferences).toEqual([
+      packageManifestReference,
+    ]);
+    expect(result.assessment.dimensions[0]?.evidenceReferences).toEqual([
+      testFileReference,
+      {
+        id: "reviewer:reviewer-only-reference",
+        kind: "reviewer",
+        label: "Reviewer-only reference",
+      },
+    ]);
+    expect(result.assessment.caveats[0]?.evidenceReferences).toEqual([
+      {
+        id: "reviewer:reviewer-only-reference",
+        kind: "reviewer",
+        label: "Reviewer-only reference",
+      },
+    ]);
+  });
+
+  it("normalizes missing reviewer confidence rationales with a cautious default", async () => {
+    const reviewer = new OpenRouterReviewer({
+      chatProvider: completionProviderForContent(
+        JSON.stringify({
+          ...assessment,
+          assessedArchetype: {
+            ...assessment.assessedArchetype,
+            confidence: {
+              level: "high",
+              score: 0.91,
+            },
+          },
+          dimensions: [
+            {
+              ...assessment.dimensions[0],
+              confidence: {
+                level: "high",
+                score: 0.9,
+              },
+            },
+          ],
+        }),
+      ),
+      config: {
+        provider: "openrouter",
+        apiKey: "sk-or-v1-test",
+        model: OpenRouterDefaultModelId,
+        baseUrl: "https://openrouter.ai/api/v1",
+      },
+      now: () => new Date("2026-04-26T12:00:00-07:00"),
+    });
+
+    const result = await reviewer.assess(request);
+
+    expect(result.kind).toBe("assessment");
+    if (result.kind !== "assessment") {
+      throw new Error("Expected reviewer assessment");
+    }
+    expect(result.assessment.assessedArchetype.confidence.rationale).toContain(
+      "did not provide",
+    );
+    expect(result.assessment.dimensions[0]?.confidence.rationale).toContain(
+      "did not provide",
+    );
+  });
+
+  it("normalizes loose reviewer evidence objects and missing archetype rationale", async () => {
+    const reviewer = new OpenRouterReviewer({
+      chatProvider: completionProviderForContent(
+        JSON.stringify({
+          ...assessment,
+          assessedArchetype: {
+            ...assessment.assessedArchetype,
+            rationale: undefined,
+            evidenceReferences: [
+              {
+                ...packageManifestReference,
+                notes: "",
+              },
+            ],
+          },
+          dimensions: [
+            {
+              ...assessment.dimensions[0],
+              evidenceReferences: [
+                {
+                  ...testFileReference,
+                  path: null,
+                  notes: "",
+                  lineStart: 0,
+                  lineEnd: 0,
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+      config: {
+        provider: "openrouter",
+        apiKey: "sk-or-v1-test",
+        model: OpenRouterDefaultModelId,
+        baseUrl: "https://openrouter.ai/api/v1",
+      },
+      now: () => new Date("2026-04-26T12:00:00-07:00"),
+    });
+
+    const result = await reviewer.assess(request);
+
+    expect(result.kind).toBe("assessment");
+    if (result.kind !== "assessment") {
+      throw new Error("Expected reviewer assessment");
+    }
+    expect(result.assessment.assessedArchetype.rationale).toContain(
+      "did not provide",
+    );
+    expect(
+      result.assessment.assessedArchetype.evidenceReferences[0]?.notes,
+    ).toBeUndefined();
+    expect(
+      result.assessment.dimensions[0]?.evidenceReferences[0]?.path,
+    ).toBeUndefined();
+    expect(
+      result.assessment.dimensions[0]?.evidenceReferences[0]?.lineStart,
+    ).toBeUndefined();
   });
 
   it("returns malformed-response when model JSON does not match the reviewer assessment schema", async () => {
@@ -249,7 +497,7 @@ describe("OpenRouterReviewer", () => {
         {
           path: [],
           message:
-            "OpenRouter reviewer output is unavailable because the provider request failed.",
+            "OpenRouter reviewer output is unavailable because OpenRouter returned status 429 for openrouter/free. The selected model or account may be rate limited; retry later or choose another structured-output-capable model.",
         },
       ],
     });

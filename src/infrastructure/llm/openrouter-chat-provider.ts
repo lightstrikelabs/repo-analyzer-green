@@ -16,6 +16,7 @@ export type OpenRouterChatMessage = {
 
 export type OpenRouterChatCompletionControls = {
   readonly maxOutputTokens?: number;
+  readonly responseFormat?: "json_object";
   readonly temperature?: number;
 };
 
@@ -78,9 +79,13 @@ const OpenRouterChatProviderResponseSchema = z
 const OpenRouterChatCompletionControlsSchema = z
   .object({
     maxOutputTokens: z.int().positive().optional(),
+    responseFormat: z.literal("json_object").optional(),
     temperature: z.number().min(0).max(2).optional(),
   })
   .strict();
+
+const OpenRouterAppReferer = "https://repo-analyzer-green.vercel.app";
+const OpenRouterAppTitle = "Repo Analyzer Green";
 
 export class OpenRouterChatCompletionProvider {
   private readonly fetcher: OpenRouterChatFetcher;
@@ -115,6 +120,8 @@ export class OpenRouterChatCompletionProvider {
           headers: {
             authorization: `Bearer ${request.config.apiKey}`,
             "content-type": "application/json",
+            "HTTP-Referer": OpenRouterAppReferer,
+            "X-Title": OpenRouterAppTitle,
           },
           body: JSON.stringify({
             model: request.config.model,
@@ -128,8 +135,6 @@ export class OpenRouterChatCompletionProvider {
       return providerFailure({
         model: request.config.model,
         code: "network-error",
-        userFacingCaveat:
-          "OpenRouter reviewer output is unavailable because the provider request could not be completed.",
       });
     }
 
@@ -138,8 +143,6 @@ export class OpenRouterChatCompletionProvider {
         model: request.config.model,
         code: "provider-error",
         status: response.status,
-        userFacingCaveat:
-          "OpenRouter reviewer output is unavailable because the provider request failed.",
       });
     }
 
@@ -198,11 +201,23 @@ export class OpenRouterChatCompletionProvider {
 
 function requestBodyControls(
   controls: OpenRouterChatCompletionControls | undefined,
-): Record<string, number> {
-  const requestControls: Record<string, number> = {};
+): {
+  readonly max_tokens?: number;
+  readonly response_format?: { readonly type: "json_object" };
+  readonly temperature?: number;
+} {
+  const requestControls: {
+    max_tokens?: number;
+    response_format?: { readonly type: "json_object" };
+    temperature?: number;
+  } = {};
 
   if (controls?.maxOutputTokens !== undefined) {
     requestControls.max_tokens = controls.maxOutputTokens;
+  }
+
+  if (controls?.responseFormat !== undefined) {
+    requestControls.response_format = { type: controls.responseFormat };
   }
 
   if (controls?.temperature !== undefined) {
@@ -221,6 +236,9 @@ function parseOpenRouterChatCompletionControls(
     ...(parsedControls.maxOutputTokens === undefined
       ? {}
       : { maxOutputTokens: parsedControls.maxOutputTokens }),
+    ...(parsedControls.responseFormat === undefined
+      ? {}
+      : { responseFormat: parsedControls.responseFormat }),
     ...(parsedControls.temperature === undefined
       ? {}
       : { temperature: parsedControls.temperature }),
@@ -231,14 +249,16 @@ function providerFailure(options: {
   readonly model: OpenRouterModelId;
   readonly code: OpenRouterProviderFailureCode;
   readonly status?: number;
-  readonly userFacingCaveat: string;
+  readonly userFacingCaveat?: string;
 }): OpenRouterProviderFailure {
   const baseFailure = {
     kind: "provider-failure" as const,
     provider: "openrouter" as const,
     model: options.model,
     code: options.code,
-    userFacingCaveat: options.userFacingCaveat,
+    userFacingCaveat:
+      options.userFacingCaveat ??
+      userFacingProviderFailureCaveat(providerFailureCaveatOptions(options)),
   };
 
   if (options.status === undefined) {
@@ -249,4 +269,76 @@ function providerFailure(options: {
     ...baseFailure,
     status: options.status,
   };
+}
+
+function providerFailureCaveatOptions(options: {
+  readonly model: OpenRouterModelId;
+  readonly code: OpenRouterProviderFailureCode;
+  readonly status?: number;
+}):
+  | {
+      readonly code: OpenRouterProviderFailureCode;
+      readonly model: OpenRouterModelId;
+    }
+  | {
+      readonly code: OpenRouterProviderFailureCode;
+      readonly model: OpenRouterModelId;
+      readonly status: number;
+    } {
+  if (options.status === undefined) {
+    return {
+      code: options.code,
+      model: options.model,
+    };
+  }
+
+  return {
+    code: options.code,
+    model: options.model,
+    status: options.status,
+  };
+}
+
+function userFacingProviderFailureCaveat(options: {
+  readonly code: OpenRouterProviderFailureCode;
+  readonly model: OpenRouterModelId;
+  readonly status?: number;
+}): string {
+  switch (options.code) {
+    case "network-error":
+      return `OpenRouter reviewer output is unavailable because the network request to OpenRouter could not be completed for ${options.model}. Retry the request; if it persists, choose another structured-output-capable model or check provider connectivity.`;
+    case "provider-error":
+      return providerStatusCaveat(options.model, options.status);
+    case "invalid-response":
+      return `OpenRouter reviewer output is unavailable because OpenRouter returned an unexpected response shape for ${options.model}. Retry the request or choose another structured-output-capable model.`;
+    case "empty-response":
+      return `OpenRouter reviewer output is unavailable because OpenRouter returned no usable message content for ${options.model}. Retry the request or choose another structured-output-capable model.`;
+    case "missing-api-key":
+      return "OpenRouter reviewer output is unavailable because OPENROUTER_API_KEY is not configured for this request.";
+  }
+}
+
+function providerStatusCaveat(
+  model: OpenRouterModelId,
+  status: number | undefined,
+): string {
+  if (status === 401 || status === 403) {
+    return `OpenRouter reviewer output is unavailable because OpenRouter returned status ${status} for ${model}. Check the API key and account access, then retry.`;
+  }
+
+  if (status === 400 || status === 404) {
+    return `OpenRouter reviewer output is unavailable because OpenRouter returned status ${status} for ${model}. Check that the selected model id is available and supports structured JSON output.`;
+  }
+
+  if (status === 402) {
+    return `OpenRouter reviewer output is unavailable because OpenRouter returned status 402 for ${model}. Check account credits or choose an available free structured-output-capable model.`;
+  }
+
+  if (status === 429) {
+    return `OpenRouter reviewer output is unavailable because OpenRouter returned status 429 for ${model}. The selected model or account may be rate limited; retry later or choose another structured-output-capable model.`;
+  }
+
+  return status === undefined
+    ? `OpenRouter reviewer output is unavailable because the provider request failed for ${model}. Retry the request or choose another structured-output-capable model.`
+    : `OpenRouter reviewer output is unavailable because OpenRouter returned status ${status} for ${model}. Retry the request or choose another structured-output-capable model.`;
 }

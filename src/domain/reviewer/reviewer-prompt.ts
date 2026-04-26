@@ -47,11 +47,13 @@ export function renderReviewerPrompt(
     "Static metrics are evidence, not final judgments.",
     "Security hygiene signals are indicators that require review, not confirmed vulnerabilities.",
     "Every dimension assessment must cite evidenceReferences when evidence exists, or explain missingEvidence when it does not.",
+    "When citing evidenceReferences, copy complete EvidenceReference objects from the input. Do not return string ids.",
     `Assess these dimensions exactly: ${requiredDimensions.join(", ")}.`,
     "Include caveats for low confidence, unavailable evidence, unsupported ecosystems, bounded scans, and provider limitations.",
     "Include follow-up questions tied to uncertainty or risk, not generic advice.",
     "Use confidence.score between 0 and 1 and confidence.level as low, medium, or high.",
-    "Use concise strings. Preserve evidence reference ids exactly as supplied.",
+    "Every confidence object must include a rationale string.",
+    "Use concise strings. Preserve ids inside copied evidence reference objects exactly as supplied.",
     `Response contract JSON example: ${responseContractJson}`,
   ].join("\n");
   const user = [
@@ -101,7 +103,17 @@ function responseContract() {
         score: 0.5,
         rationale: "string",
       },
-      evidenceReferences: ["EvidenceReference objects copied from input"],
+      evidenceReferences: [
+        {
+          id: "evidence:id",
+          kind: "file | collector | reviewer | derived",
+          label: "string",
+          path: "optional/path.ext",
+          lineStart: 1,
+          lineEnd: 1,
+          notes: "optional notes",
+        },
+      ],
       rationale: "string",
     },
     dimensions: requiredDimensions.map((dimension) => ({
@@ -112,7 +124,17 @@ function responseContract() {
         score: 0.5,
         rationale: "string",
       },
-      evidenceReferences: ["EvidenceReference objects copied from input"],
+      evidenceReferences: [
+        {
+          id: "evidence:id",
+          kind: "file | collector | reviewer | derived",
+          label: "string",
+          path: "optional/path.ext",
+          lineStart: 1,
+          lineEnd: 1,
+          notes: "optional notes",
+        },
+      ],
       strengths: ["evidence-backed strength"],
       risks: ["evidence-backed risk"],
       missingEvidence: ["evidence that would change confidence"],
@@ -128,7 +150,17 @@ function responseContract() {
           score: 0.5,
           rationale: "string",
         },
-        evidenceReferences: ["EvidenceReference objects copied from input"],
+        evidenceReferences: [
+          {
+            id: "evidence:id",
+            kind: "file | collector | reviewer | derived",
+            label: "string",
+            path: "optional/path.ext",
+            lineStart: 1,
+            lineEnd: 1,
+            notes: "optional notes",
+          },
+        ],
       },
     ],
     followUpQuestions: [
