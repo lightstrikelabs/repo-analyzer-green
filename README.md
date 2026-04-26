@@ -66,7 +66,17 @@ Full local CI-equivalent check:
 pnpm run ci
 ```
 
-The scaffold intentionally contains only the application shell, architecture folders, and tooling. Repository analysis, reviewer assessment, persistence, auth, and deployment integrations are tracked as separate issues.
+The scaffold intentionally contains only the application shell, architecture folders, and tooling. Repository analysis, reviewer assessment, durable persistence, auth, and deployment integrations are tracked as separate issues.
+
+## Local Persistence
+
+For local and anonymous use, the app stores repository form state, selected model preference, latest report cards, and follow-up chat threads in browser `localStorage`.
+
+That browser state is convenience-only:
+
+- No API keys are stored in browser persistence.
+- Invalid or version-mismatched saved data is discarded.
+- Durable account/workspace persistence will replace the browser adapter behind the same application boundaries later.
 
 See [docs/development-plan.md](docs/development-plan.md) for the milestone and issue plan.
 See [docs/red-parity.md](docs/red-parity.md) for the feature parity map against `repo-analyzer-red`.
