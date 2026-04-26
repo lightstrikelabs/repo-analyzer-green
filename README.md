@@ -43,12 +43,20 @@ pnpm dev
 Quality gates:
 
 ```bash
+pnpm type-escape:check
 pnpm lint
 pnpm format:check
 pnpm typecheck
 pnpm test
 pnpm build
 pnpm test:e2e
+```
+
+Commit and PR title validation:
+
+```bash
+pnpm run commit-message:check -- --message "feat(chat): model conversations"
+pnpm exec lefthook install
 ```
 
 Full local CI-equivalent check:
@@ -60,3 +68,4 @@ pnpm run ci
 The scaffold intentionally contains only the application shell, architecture folders, and tooling. Repository analysis, reviewer assessment, persistence, auth, and deployment integrations are tracked as separate issues.
 
 See [docs/development-plan.md](docs/development-plan.md) for the milestone and issue plan.
+See [docs/commit-messages.md](docs/commit-messages.md) for commit and PR title standards.

@@ -2,3 +2,8 @@ pre-commit:
   commands:
     type-escape-check:
       run: pnpm run type-escape:check
+
+commit-msg:
+  commands:
+    conventional-commit:
+      run: pnpm run commit-message:check -- --file {1}

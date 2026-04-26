@@ -2,6 +2,7 @@
   "name": "repo-analyzer-green",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@10.29.3",
   "engines": {
     "node": "24.x",
@@ -13,7 +14,8 @@
     "start": "next start",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
-    "type-escape:check": "node scripts/check-type-escapes.mjs",
+    "type-escape:check": "node scripts/check-type-escapes.ts",
+    "commit-message:check": "node scripts/check-commit-message.ts",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "typecheck": "rm -rf .next/types .next/dev/types && NODE_ENV=development next typegen && tsc --noEmit",

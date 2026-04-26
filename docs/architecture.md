@@ -353,6 +353,8 @@ Mechanical enforcement:
 - Prefer squashing PRs with a high-signal Conventional Commit title and body
 - Reject vague subjects such as `update stuff`, `fix`, `changes`, or `wip`
 
+See [commit-messages.md](commit-messages.md) for the full standard, examples, and local validation commands.
+
 ## Zod Strategy
 
 Use Zod heavily, but deliberately.
