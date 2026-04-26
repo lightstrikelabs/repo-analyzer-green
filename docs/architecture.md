@@ -350,6 +350,7 @@ Pre-commit should stay fast:
 - Format or format-check staged files
 - Run Oxlint on staged JavaScript/TypeScript files
 - Block obvious forbidden type escapes such as `as any`, `: any`, `<any>`, and double assertions through `unknown`
+- Enforce the shared red-green commit gate against staged source edits that skip a colocated test change
 
 Pre-push should run the stronger local gate:
 - `pnpm check`

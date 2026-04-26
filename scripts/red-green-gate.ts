@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { dirname, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import process from "node:process";
@@ -128,8 +129,9 @@ const DEFAULT_ALLOWLIST: readonly string[] = [
 ];
 
 const RECENCY_WINDOW_MS = 30 * 60 * 1000;
-const EXEMPT_MARKER_REGEX = /\/\/\s*red-green:exempt\b/i;
+const EXEMPT_MARKER_REGEX = /(?:\/\/|#)\s*red-green:exempt\b/i;
 const HANDLED_TOOLS = new Set(["Edit", "Write", "MultiEdit"]);
+const STAGED_MODE_FLAG = "--staged";
 
 export function loadLedger(ledgerPath: string): Ledger {
   if (!existsSync(ledgerPath)) {
@@ -213,6 +215,11 @@ function extractNewContent(toolName: string, toolInput: unknown): string {
 }
 
 async function main(): Promise<void> {
+  if (process.argv.includes(STAGED_MODE_FLAG)) {
+    await mainForStagedCommit();
+    return;
+  }
+
   const stdin = await readStdin();
   if (stdin.trim() === "") {
     process.exit(0);
@@ -282,6 +289,87 @@ async function main(): Promise<void> {
   process.stderr.write(`${decision.reason}\n`);
   process.stderr.write(`Blocked: ${decision.blockedFiles.join(", ")}\n`);
   process.exit(2);
+}
+
+async function mainForStagedCommit(): Promise<void> {
+  const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+  const stagedFiles = readStagedFiles(projectDir);
+  const stagedPaths = stagedFiles.map((file) => file.path);
+  const stagedTestFiles = stagedFiles
+    .filter((file) => isTestFile(file.path))
+    .map((file) => file.path);
+
+  const overrideMarkers = new Map<string, string>();
+  for (const file of stagedFiles) {
+    if (EXEMPT_MARKER_REGEX.test(file.content)) {
+      overrideMarkers.set(file.path, "inline marker");
+    }
+  }
+
+  const decision = decide({
+    filesTouched: stagedPaths,
+    recentTestEdits: stagedTestFiles,
+    allowlist: DEFAULT_ALLOWLIST,
+    overrideMarkers,
+  });
+
+  if (decision.allowed) {
+    process.exit(0);
+  }
+
+  process.stderr.write(`${decision.reason}\n`);
+  process.stderr.write(`Blocked: ${decision.blockedFiles.join(", ")}\n`);
+  process.exit(2);
+}
+
+function readStagedFiles(
+  projectDir: string,
+): readonly { path: string; content: string }[] {
+  const stagedNames = spawnSync(
+    "git",
+    ["diff", "--cached", "--name-only", "-z", "--diff-filter=ACMR"],
+    {
+      cwd: projectDir,
+      encoding: "utf8",
+    },
+  );
+
+  if (stagedNames.error !== undefined || stagedNames.status !== 0) {
+    const message =
+      stagedNames.error?.message ??
+      stagedNames.stderr?.toString() ??
+      "unable to read staged files";
+    process.stderr.write(`${message}\n`);
+    process.exit(1);
+  }
+
+  const filePaths = stagedNames.stdout
+    .split("\0")
+    .map((filePath) => filePath.trim())
+    .filter((filePath) => filePath !== "");
+
+  const stagedFiles: { path: string; content: string }[] = [];
+  for (const filePath of filePaths) {
+    const stagedContent = spawnSync("git", ["show", `:${filePath}`], {
+      cwd: projectDir,
+      encoding: "utf8",
+    });
+    if (stagedContent.error !== undefined || stagedContent.status !== 0) {
+      const message =
+        stagedContent.error?.message ??
+        stagedContent.stderr?.toString() ??
+        `unable to read staged content for ${filePath}`;
+      process.stderr.write(`${message}\n`);
+      process.exit(1);
+    }
+
+    stagedFiles.push({
+      path: filePath,
+      content: stagedContent.stdout,
+    });
+  }
+
+  return stagedFiles;
 }
 
 if (

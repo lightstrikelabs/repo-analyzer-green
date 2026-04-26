@@ -71,3 +71,4 @@ If a task conflicts with those documents, call out the conflict before editing. 
 - Use fake adapters for tests before wiring real infrastructure.
 - Preserve provenance, confidence, caveats, and missing evidence in report behavior.
 - Do not treat raw test LOC, raw coverage, or single static scores as direct proof of repository quality.
+- Red-green enforcement is shared tooling, not a judgment call: `.claude/settings.json` guards in-session source edits, `lefthook.yml` guards staged commits, and both rely on `scripts/red-green-gate.ts`. Update the script and the two hook surfaces together when changing the workflow.
