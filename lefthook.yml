@@ -1,0 +1,4 @@
+pre-commit:
+  commands:
+    type-escape-check:
+      run: pnpm run type-escape:check
