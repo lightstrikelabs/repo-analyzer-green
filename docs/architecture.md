@@ -443,6 +443,7 @@ Commit body expectations:
 - Include `Issue: #<number>`
 - Include `PR: #<number>` once the PR exists
 - Avoid repeating the subject
+- Do not amend commits during normal PR work; add follow-up commits for metadata, review fixes, and corrections.
 
 Examples:
 

@@ -55,6 +55,7 @@ If a task conflicts with those documents, call out the conflict before editing. 
 - Use Conventional Commits for all commit subjects.
 - Include a high-signal commit body with a second `-m` for non-trivial changes so future `git blame` readers can understand intent and tradeoffs.
 - Include GitHub references in non-trivial commit bodies once known: `Issue: #<number>` and `PR: #<number>`.
+- Do not amend commits during normal PR work. Add follow-up commits for PR metadata, review fixes, and corrections so the development history stays inspectable.
 
 ## 5. Respect Software Fundamentals
 
