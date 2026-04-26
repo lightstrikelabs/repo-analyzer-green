@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { AnalyzeRepositoryResponse } from "../../../src/application/analyze-repository/analyze-repository-response";
+import { OpenRouterDefaultModelId } from "../../../src/infrastructure/llm/openrouter-config";
 import type {
   BrowserFollowUpState,
   BrowserLocalSession,
 } from "../../../src/infrastructure/persistence/browser-local-session-storage";
 import {
-  browserRepositoryFormFromIdentity,
   clearBrowserLocalSession,
   defaultBrowserRepositoryForm,
   loadBrowserAnalysisSession,
@@ -24,10 +24,8 @@ describe("browser-analysis-session-storage", () => {
       schemaVersion: "browser-local-session.v1",
       analysis: {
         form: {
-          provider: "local-fixture",
-          name: "minimal-node-library",
-          revision: "fixture",
-          selectedModel: "fixture-default",
+          repoUrl: "https://github.com/lightstrikelabs/repo-analyzer-green",
+          selectedModel: OpenRouterDefaultModelId,
         },
         latestReport: analysis,
       },
@@ -100,21 +98,26 @@ describe("browser-analysis-session-storage", () => {
     expect(loadBrowserLocalSession(storage)).toBeNull();
   });
 
-  it("can reconstruct a repository form from a repository identity", () => {
-    expect(
-      browserRepositoryFormFromIdentity({
-        provider: "github",
-        owner: "lightstrikelabs",
-        name: "repo-analyzer-green",
-        revision: "main",
-      }),
-    ).toEqual({
-      provider: "github",
-      owner: "lightstrikelabs",
-      name: "repo-analyzer-green",
-      revision: "main",
-      selectedModel: "fixture-default",
+  it("defaults to an empty repo URL and the free router model", () => {
+    expect(defaultBrowserRepositoryForm()).toEqual({
+      repoUrl: "",
+      selectedModel: OpenRouterDefaultModelId,
     });
+  });
+
+  it("does not include a credential field in the persisted form", () => {
+    const storage = new FakeStorage();
+
+    saveBrowserAnalysisSession(storage, {
+      form: {
+        repoUrl: "https://github.com/lightstrikelabs/repo-analyzer-green",
+        selectedModel: "openai/gpt-4.1-mini",
+      },
+    });
+
+    expect(storage.raw).toContain("repoUrl");
+    expect(storage.raw).toContain("selectedModel");
+    expect(storage.raw).not.toContain("apiKey");
   });
 });
 

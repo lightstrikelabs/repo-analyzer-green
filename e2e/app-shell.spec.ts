@@ -1,13 +1,19 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+import { analyzeRepositoryResponseFixture } from "../test/support/analyze-repository-response-fixture";
 
 test("runs the repository analysis workflow", async ({ page }) => {
+  await mockAnalyzeRoute(page);
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: "Repository analysis" }),
+    page.getByRole("heading", { name: "Report Card" }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Analyze repository" }).click();
+  await page
+    .getByLabel("GitHub repository URL")
+    .fill("https://github.com/lightstrikelabs/repo-analyzer-green");
+  await page.getByRole("button", { name: "Analyze" }).click();
 
   await expect(
     page.getByRole("heading", { name: "Evidence-backed report" }),
@@ -32,11 +38,14 @@ test("runs the repository analysis workflow", async ({ page }) => {
 });
 
 test("starts a follow-up thread from the report view", async ({ page }) => {
+  await mockAnalyzeRoute(page);
   await page.goto("/");
   await page
-    .getByLabel("Reviewer model preference")
-    .fill("fixture-parity-model");
-  await page.getByRole("button", { name: "Analyze repository" }).click();
+    .getByLabel("GitHub repository URL")
+    .fill("https://github.com/lightstrikelabs/repo-analyzer-green");
+  await page.getByText("Advanced", { exact: true }).click();
+  await page.getByLabel("OpenRouter Model").fill("fixture-parity-model");
+  await page.getByRole("button", { name: "Analyze" }).click();
 
   await expect(page.getByText("Follow-up").first()).toBeVisible();
 
@@ -61,7 +70,8 @@ test("starts a follow-up thread from the report view", async ({ page }) => {
 
   await page.reload();
 
-  await expect(page.getByLabel("Reviewer model preference")).toHaveValue(
+  await page.getByText("Advanced", { exact: true }).click();
+  await expect(page.getByLabel("OpenRouter Model")).toHaveValue(
     "fixture-parity-model",
   );
   await expect(
@@ -70,3 +80,13 @@ test("starts a follow-up thread from the report view", async ({ page }) => {
   await expect(page.getByText("Evidence summary")).toBeVisible();
   await expect(page.getByText("Evidence-backed answer")).toBeVisible();
 });
+
+async function mockAnalyzeRoute(page: Page) {
+  await page.route("**/api/analyze", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(analyzeRepositoryResponseFixture),
+    });
+  });
+}
