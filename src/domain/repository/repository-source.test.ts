@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   RepositorySourceError,
   type RepositoryReference,
-} from "../../../src/domain/repository/repository-source";
+} from "./repository-source";
 
 describe("RepositorySource domain types", () => {
   it("carries repository source failure context", () => {

@@ -71,3 +71,4 @@ The scaffold intentionally contains only the application shell, architecture fol
 See [docs/development-plan.md](docs/development-plan.md) for the milestone and issue plan.
 See [docs/commit-messages.md](docs/commit-messages.md) for commit and PR title standards.
 See [docs/fixtures.md](docs/fixtures.md) for repository fixture rules.
+See [docs/architecture.md](docs/architecture.md#test-placement) for test placement rules.
