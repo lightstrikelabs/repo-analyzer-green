@@ -1,0 +1,6 @@
+site_name: Repo Analyzer Green Fixture Docs
+theme:
+  name: material
+nav:
+  - Home: docs/index.md
+  - Reference: docs/reference.md
