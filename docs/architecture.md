@@ -212,6 +212,8 @@ Recommended script:
 }
 ```
 
+For this Next.js app, run route type generation before `tsc` and keep it aligned with `next build`. Do not force development-mode typegen in the scripted `typecheck` command; it rewrites `next-env.d.ts` to `.next/dev/types/routes.d.ts`, while `next build` rewrites the same generated file to `.next/types/routes.d.ts`.
+
 Recommended TypeScript posture:
 - `strict: true`
 - `allowJs: false`
