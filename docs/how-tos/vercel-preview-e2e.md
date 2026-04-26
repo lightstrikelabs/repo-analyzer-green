@@ -6,7 +6,7 @@ This guide explains how to let GitHub Actions run Playwright against protected V
 
 Use this setup when Vercel preview deployments are protected by Vercel Authentication, Password Protection, Trusted IPs, or other deployment protection settings.
 
-Without a bypass secret, `.github/workflows/preview-e2e.yml` intentionally skips the browser run and emits a GitHub notice. That avoids false failures against Vercel's authentication page and avoids logging protected page contents.
+Without a bypass secret, `.github/workflows/preview-e2e.yml` still runs Playwright against the preview URL. For protected previews, that usually means the test reaches Vercel's deployment protection page instead of the application and fails.
 
 ## Secret Flow
 
@@ -50,11 +50,11 @@ VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
 1. Open a PR that triggers a Vercel preview deployment.
 2. Wait for Vercel to report a successful preview deployment status.
-3. Confirm the `Preview E2E` workflow runs instead of skipping with the missing-secret notice.
+3. Confirm the `Preview E2E` workflow runs after the Vercel preview deployment succeeds.
 4. Confirm the Playwright check passes against the preview URL.
 5. Confirm the workflow logs do not include the secret value.
 
-Do not verify by printing the secret. If the workflow still skips, check that the GitHub secret name is exactly `VERCEL_AUTOMATION_BYPASS_SECRET` and that the Vercel preview deployment is reporting an environment URL.
+Do not verify by printing the secret. If the workflow reaches a Vercel protection page, check that the GitHub secret name is exactly `VERCEL_AUTOMATION_BYPASS_SECRET` and that the Vercel preview deployment is reporting an environment URL.
 
 ## Rotate
 

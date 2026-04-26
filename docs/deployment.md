@@ -59,7 +59,7 @@ x-vercel-protection-bypass: <secret>
 x-vercel-set-bypass-cookie: true
 ```
 
-When the secret is missing, the preview workflow emits a GitHub notice and skips the browser run instead of logging protected page contents or failing with an authentication page assertion.
+For protected preview deployments, this secret is required for Preview E2E to exercise the application instead of Vercel's deployment protection page.
 
 References:
 - [Vercel: Methods to bypass Deployment Protection](https://vercel.com/docs/security/deployment-protection/methods-to-bypass-deployment-protection)
