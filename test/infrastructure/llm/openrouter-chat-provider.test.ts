@@ -54,6 +54,43 @@ describe("OpenRouterChatCompletionProvider", () => {
     });
   });
 
+  it("includes request-scoped token and cost controls when provided", async () => {
+    const requests: Request[] = [];
+    const fetcher: OpenRouterChatFetcher = async (request) => {
+      requests.push(request);
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "structured assessment" } }],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    };
+    const provider = new OpenRouterChatCompletionProvider({ fetcher });
+
+    await provider.complete({
+      config: {
+        provider: "openrouter",
+        apiKey: "sk-or-v1-request-scoped",
+        model: OpenRouterDefaultModelId,
+        baseUrl: "https://openrouter.ai/api/v1",
+      },
+      metadata: { usageContext: "reviewer-assessment" },
+      messages: [{ role: "user", content: "Review this evidence." }],
+      controls: {
+        maxOutputTokens: 1_500,
+        temperature: 0,
+      },
+    });
+
+    expect(await requests[0]?.json()).toEqual({
+      model: OpenRouterDefaultModelId,
+      messages: [{ role: "user", content: "Review this evidence." }],
+      metadata: { usageContext: "reviewer-assessment" },
+      max_tokens: 1_500,
+      temperature: 0,
+    });
+  });
+
   it("returns a provider failure without calling fetch when the API key is absent", async () => {
     const fetcher: OpenRouterChatFetcher = async () => {
       throw new Error("fetch should not be called");

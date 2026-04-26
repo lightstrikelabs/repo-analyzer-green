@@ -14,10 +14,16 @@ export type OpenRouterChatMessage = {
   readonly content: string;
 };
 
+export type OpenRouterChatCompletionControls = {
+  readonly maxOutputTokens?: number;
+  readonly temperature?: number;
+};
+
 export type OpenRouterChatCompletionRequest = {
   readonly config: OpenRouterProviderConfig;
   readonly metadata: OpenRouterRequestMetadata;
   readonly messages: readonly OpenRouterChatMessage[];
+  readonly controls?: OpenRouterChatCompletionControls;
 };
 
 export type OpenRouterChatCompletion = {
@@ -69,6 +75,13 @@ const OpenRouterChatProviderResponseSchema = z
   })
   .passthrough();
 
+const OpenRouterChatCompletionControlsSchema = z
+  .object({
+    maxOutputTokens: z.int().positive().optional(),
+    temperature: z.number().min(0).max(2).optional(),
+  })
+  .strict();
+
 export class OpenRouterChatCompletionProvider {
   private readonly fetcher: OpenRouterChatFetcher;
 
@@ -80,6 +93,10 @@ export class OpenRouterChatCompletionProvider {
     request: OpenRouterChatCompletionRequest,
   ): Promise<OpenRouterChatCompletionResult> {
     const metadata = OpenRouterRequestMetadataSchema.parse(request.metadata);
+    const controls =
+      request.controls === undefined
+        ? undefined
+        : parseOpenRouterChatCompletionControls(request.controls);
 
     if (request.config.apiKey === undefined) {
       return providerFailure({
@@ -103,6 +120,7 @@ export class OpenRouterChatCompletionProvider {
             model: request.config.model,
             messages: request.messages,
             metadata,
+            ...requestBodyControls(controls),
           }),
         }),
       );
@@ -176,6 +194,37 @@ export class OpenRouterChatCompletionProvider {
       rawResponseId: parsedResponse.data.id,
     };
   }
+}
+
+function requestBodyControls(
+  controls: OpenRouterChatCompletionControls | undefined,
+): Record<string, number> {
+  const requestControls: Record<string, number> = {};
+
+  if (controls?.maxOutputTokens !== undefined) {
+    requestControls.max_tokens = controls.maxOutputTokens;
+  }
+
+  if (controls?.temperature !== undefined) {
+    requestControls.temperature = controls.temperature;
+  }
+
+  return requestControls;
+}
+
+function parseOpenRouterChatCompletionControls(
+  controls: OpenRouterChatCompletionControls,
+): OpenRouterChatCompletionControls {
+  const parsedControls = OpenRouterChatCompletionControlsSchema.parse(controls);
+
+  return {
+    ...(parsedControls.maxOutputTokens === undefined
+      ? {}
+      : { maxOutputTokens: parsedControls.maxOutputTokens }),
+    ...(parsedControls.temperature === undefined
+      ? {}
+      : { temperature: parsedControls.temperature }),
+  };
 }
 
 function providerFailure(options: {
