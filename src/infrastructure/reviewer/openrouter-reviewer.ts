@@ -121,7 +121,7 @@ export class OpenRouterReviewer implements Reviewer {
       reviewerVersion: OpenRouterReviewerVersion,
       modelProvider: "openrouter",
       modelName: this.config.model,
-      reviewedAt: formatLocalIsoDatetime(this.now()),
+      reviewedAt: this.now().toISOString(),
     };
   }
 }
@@ -230,25 +230,4 @@ function repositoryLabel(repository: ReviewerRequest["repository"]): string {
     repository.revision === undefined ? "" : ` @ ${repository.revision}`;
 
   return `${repository.provider}:${ownerPrefix}${repository.name}${revisionSuffix}`;
-}
-
-function formatLocalIsoDatetime(date: Date): string {
-  const offsetMinutes = -date.getTimezoneOffset();
-  const offsetSign = offsetMinutes < 0 ? "-" : "+";
-  const absoluteOffsetMinutes = Math.abs(offsetMinutes);
-  const offsetHours = Math.floor(absoluteOffsetMinutes / 60);
-  const remainingOffsetMinutes = absoluteOffsetMinutes % 60;
-
-  return [
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-    "T",
-    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`,
-    `.${date.getMilliseconds().toString().padStart(3, "0")}`,
-    offsetSign,
-    `${pad(offsetHours)}:${pad(remainingOffsetMinutes)}`,
-  ].join("");
-}
-
-function pad(value: number): string {
-  return value.toString().padStart(2, "0");
 }

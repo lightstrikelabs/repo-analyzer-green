@@ -149,7 +149,7 @@ describe("OpenRouterReviewer", () => {
         reviewerVersion: "openrouter-reviewer.v1",
         modelProvider: "openrouter",
         modelName: OpenRouterDefaultModelId,
-        reviewedAt: "2026-04-26T12:00:00.000-07:00",
+        reviewedAt: "2026-04-26T19:00:00.000Z",
       },
       rawResponse: "This is not JSON.",
       validationIssues: [
@@ -217,7 +217,7 @@ describe("OpenRouterReviewer", () => {
         reviewerVersion: "openrouter-reviewer.v1",
         modelProvider: "openrouter",
         modelName: OpenRouterDefaultModelId,
-        reviewedAt: "2026-04-26T12:00:00.000-07:00",
+        reviewedAt: "2026-04-26T19:00:00.000Z",
       },
       rawResponse: "",
       validationIssues: [
