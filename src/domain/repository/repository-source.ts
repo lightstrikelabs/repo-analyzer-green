@@ -47,8 +47,10 @@ export class RepositorySourceError extends Error {
       | "extraction-failed"
       | "file-not-found"
       | "invalid-repository-reference"
-      | "repository-not-found",
+      | "repository-not-found"
+      | "repository-too-large",
     readonly repository: RepositoryReference,
+    readonly detail?: string,
   ) {
     super(message);
     this.name = "RepositorySourceError";

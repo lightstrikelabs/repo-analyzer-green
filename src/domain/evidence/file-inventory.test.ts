@@ -106,6 +106,23 @@ describe("collectFileInventory", () => {
       }),
     ]);
   });
+
+  it("rejects repositories that exceed the file inventory limit", async () => {
+    await expect(
+      collectFileInventory(
+        repository,
+        new FakeRepositorySource([
+          textFile("src/a.ts", "export const a = 1;\n"),
+          textFile("src/b.ts", "export const b = 2;\n"),
+          textFile("src/c.ts", "export const c = 3;\n"),
+        ]),
+        { maxFileCount: 2 },
+      ),
+    ).rejects.toMatchObject({
+      code: "repository-too-large",
+      detail: "File count 3 exceeds the 2 file inventory limit.",
+    });
+  });
 });
 
 function textFile(path: RepositoryPath, text: string): FakeRepositoryFile {

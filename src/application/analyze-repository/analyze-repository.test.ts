@@ -225,4 +225,30 @@ describe("analyzeRepository", () => {
       ],
     });
   });
+
+  it("rejects oversized repositories before reviewer calls are made", async () => {
+    await expect(
+      analyzeRepository(
+        { repository },
+        {
+          repositorySource: new LocalFixtureRepositorySource({
+            fixtures: {
+              [fixture.id]: fixture,
+            },
+          }),
+          reviewer: new FakeReviewer({
+            result: {
+              kind: "assessment",
+              assessment: reviewerAssessment,
+            },
+          }),
+          fileInventoryOptions: {
+            maxFileCount: 1,
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: "repository-too-large",
+    });
+  });
 });
