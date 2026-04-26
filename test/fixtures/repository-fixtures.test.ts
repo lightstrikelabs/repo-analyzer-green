@@ -17,6 +17,34 @@ describe("repository fixtures", () => {
     ]);
   });
 
+  it("registers the additional calibration fixtures", () => {
+    expect(getRepositoryFixture("nextjs-web-app")).toMatchObject({
+      archetype: "web-app",
+      languages: ["Markdown", "TypeScript"],
+      expectedFiles: [
+        "README.md",
+        "package.json",
+        "src/app/layout.tsx",
+        "src/app/page.tsx",
+      ],
+    });
+    expect(getRepositoryFixture("go-cli-tool")).toMatchObject({
+      archetype: "cli",
+      languages: ["Go", "Markdown"],
+      expectedFiles: ["README.md", "bin/repo-analyzer.go", "go.mod"],
+    });
+    expect(getRepositoryFixture("mkdocs-docs-site")).toMatchObject({
+      archetype: "docs-heavy",
+      languages: ["Markdown", "YAML"],
+      expectedFiles: [
+        "README.md",
+        "docs/index.md",
+        "docs/reference.md",
+        "mkdocs.yml",
+      ],
+    });
+  });
+
   it("keeps registered fixture files present on disk", async () => {
     for (const fixture of Object.values(repositoryFixtures)) {
       for (const expectedFile of fixture.expectedFiles) {
