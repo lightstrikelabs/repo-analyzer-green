@@ -54,7 +54,7 @@ pnpm test:e2e
 Full local CI-equivalent check:
 
 ```bash
-pnpm ci
+pnpm run ci
 ```
 
 The scaffold intentionally contains only the application shell, architecture folders, and tooling. Repository analysis, reviewer assessment, persistence, auth, and deployment integrations are tracked as separate issues.
