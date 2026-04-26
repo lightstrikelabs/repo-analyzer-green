@@ -1182,11 +1182,12 @@ Acceptance criteria:
 Labels: `type:architecture`, `type:auth`, `type:persistence`, `type:docs`, `future-ready`, `priority:medium`
 
 Acceptance criteria:
-- Documents first likely auth provider options and selection criteria
-- Documents persistence candidates and expected stored entities
-- Defines ownership rules for saved reports and conversations
-- Defines token/secret handling constraints
-- Lists migration concerns for moving from local/in-memory state to durable database-backed state
+- Documents likely auth provider candidates and selection criteria without committing to one vendor
+- Documents likely persistence candidates and the expected stored entities
+- Defines ownership rules for saved reports, conversations, repository access, and workspace membership
+- Defines token/secret handling constraints, including request scoping and no-plain-text persistence
+- Lists migration concerns for moving from local/in-memory/browser-local state to durable database-backed state
+- Describes how schema versions, citations, provenance, and metadata survive storage migration
 
 ## Open Product Questions
 

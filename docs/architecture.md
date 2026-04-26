@@ -553,6 +553,18 @@ Consider TanStack Form later if forms become complex workflows with deep field s
 
 The first release can be anonymous and local/in-memory. Still, use ports so auth and persistence can be added without rewriting the domain.
 
+Likely provider candidates to evaluate later:
+- Auth.js/NextAuth for framework-native session handling and provider flexibility
+- Clerk for hosted identity and session management if operational simplicity matters more than self-hosting
+- Supabase Auth if the persistence stack leans toward Supabase-backed relational storage
+- GitHub OAuth if public-repo analysis and developer accounts remain the primary initial identity model
+
+Selection criteria:
+- Supports anonymous-first onboarding and later authenticated sessions without a domain rewrite
+- Exposes a clean server-side session or actor abstraction for application services
+- Can represent workspace membership, ownership, and future private-repository access policies
+- Does not force user credentials into logs, browser storage, or the domain model
+
 Required seams:
 - Use cases accept an actor/context object
 - Saved report and conversation concepts include optional owner/workspace metadata
@@ -564,11 +576,39 @@ Required seams:
 Likely future persistence:
 - Relational database for users, workspaces, reports, conversations, and metadata
 - Object/blob storage for large evidence artifacts or raw repository snapshots
+- Optional key-value or document storage for browser-local session state before a database exists
+
+Expected stored entities:
+- User accounts and external identity links
+- Workspaces or organizations and their membership records
+- Repository references and access grants
+- Report card records with schema version, provenance, confidence, and caveats
+- Evidence bundle records and compacted references to large raw artifacts
+- Reviewer assessment records with reviewer version or model metadata
+- Conversation records, message records, and citation records
+- Usage, rate-limit, and audit events where operational visibility is required
+- Secret references or encrypted credential envelopes, never raw user tokens in plain storage
+
+Ownership rules:
+- Anonymous users may create local or ephemeral reports during the first release
+- Authenticated reports and conversations should carry optional owner and workspace identifiers
+- Private repository access must be checked before acquisition and should not be inferred from UI state
+- Conversations inherit ownership from the report they are attached to unless explicitly transferred
+- Shared workspace data must remain distinguishable from personal or private data
+- User-supplied model or repository tokens belong to the request or the encrypted secret store, not the domain object graph
 
 Likely future auth:
 - Individual accounts first
 - Workspace/team ownership second
 - Private repository access only after provider-token access policies are designed
+
+Migration concerns:
+- Local/browser state, in-memory adapters, SQLite, and hosted databases should all satisfy the same repository ports
+- Persisted records need schema versions so local state can migrate without breaking old reports or conversations
+- Large evidence artifacts should stay separate from indexed metadata so future storage migrations can move metadata first
+- Browser-local state must be discardable when schema versions change or validation fails
+- Saved conversations must preserve citations, assumptions, and model metadata so they can be reconstructed after storage moves
+- Credential migration should never expose raw tokens in logs, analytics, or unsupported exports
 
 ## Dependency Bias
 
