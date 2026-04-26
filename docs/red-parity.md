@@ -72,6 +72,14 @@ Product-surface parity means a user can exercise those capabilities through the 
 
 Future parity PRs should cite which checklist items they satisfy.
 
+The executable parity harness lives in `e2e/red-ui-parity.spec.ts`. It is opt-in until the milestone 7 implementation issues satisfy the red product surface:
+
+```bash
+pnpm test:e2e:red-parity
+```
+
+The normal CI E2E command keeps running the stable foundational workflow. UI parity PRs should run the red-parity harness locally and call out whether the remaining failures are expected for later milestone issues.
+
 ## UI/UX Parity Checklist
 
 ### Analysis Shell
@@ -133,7 +141,7 @@ Milestone `7. Red UI/UX Parity` tracks the follow-up work:
 
 | Issue | Scope |
 | --- | --- |
-| #115 | Add a red UI/UX parity workflow harness. |
+| #115 | Add the opt-in red UI/UX parity workflow harness. |
 | #116 | Support red-style GitHub URL analysis with reviewer config. |
 | #117 | Replace provider form with red-style analysis shell. |
 | #118 | Build red-compatible report dashboard view model. |
