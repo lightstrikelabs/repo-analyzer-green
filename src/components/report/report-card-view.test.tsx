@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import type { AnalyzeRepositoryResponse } from "../../application/analyze-repository/analyze-repository-response";
 import type { ReportCard } from "../../domain/report/report-card";
 import { ReportCardView } from "./report-card-view";
 
@@ -95,17 +96,63 @@ const reportCard: ReportCard = {
   ],
 };
 
+const analysis: AnalyzeRepositoryResponse = {
+  reportCard,
+  dashboardInsights: {
+    evidenceSummary:
+      "Files analyzed: 3. Source files: 1. Test files: 1. Documentation files: 1.",
+    languageMix: [
+      {
+        language: "TypeScript",
+        fileCount: 2,
+        sourceFileCount: 1,
+        textLineCount: 16,
+        codeLineCount: 12,
+        percentOfCode: 80,
+        evidenceReferenceIds: ["language-code-shape:file:src/add.ts"],
+      },
+      {
+        language: "Markdown",
+        fileCount: 1,
+        sourceFileCount: 0,
+        textLineCount: 4,
+        codeLineCount: 3,
+        percentOfCode: 20,
+        evidenceReferenceIds: ["language-code-shape:file:README.md"],
+      },
+    ],
+    codeShapeSummary: {
+      analyzedFileCount: 3,
+      sourceFileCount: 1,
+      testFileCount: 1,
+      documentationFileCount: 1,
+      largeFileCount: 0,
+      skippedFileCount: 0,
+      unsupportedFileCount: 0,
+      totalTextLineCount: 20,
+      totalCodeLineCount: 15,
+      totalDeferredWorkMarkerCount: 0,
+      totalBranchLikeTokenCount: 1,
+    },
+  },
+};
+
 describe("ReportCardView", () => {
-  it("renders dimensions, confidence, findings, caveats, missing evidence, and evidence references", () => {
-    const html = renderToStaticMarkup(
-      <ReportCardView reportCard={reportCard} />,
-    );
+  it("renders dashboard summary, language mix, dimensions, findings, caveats, missing evidence, and evidence references", () => {
+    const html = renderToStaticMarkup(<ReportCardView analysis={analysis} />);
 
     expect(html).toContain("minimal-node-library");
     expect(html).toContain("library");
+    expect(html).toContain("Report overview");
+    expect(html).toContain("Language Mix");
+    expect(html).toContain("TypeScript");
+    expect(html).toContain("80% of code");
+    expect(html).toContain("Reviewer Notes");
+    expect(html).toContain("Dimensions");
     expect(html).toContain("Verifiability");
     expect(html).toContain("good");
     expect(html).toContain("high confidence");
+    expect(html).toContain("Dimension score");
     expect(html).toContain("Test depth");
     expect(html).toContain("Limited fixture evidence");
     expect(html).toContain("Release workflow history");
@@ -114,11 +161,32 @@ describe("ReportCardView", () => {
   });
 
   it("does not collapse the report into a single overall score", () => {
-    const html = renderToStaticMarkup(
-      <ReportCardView reportCard={reportCard} />,
-    );
+    const html = renderToStaticMarkup(<ReportCardView analysis={analysis} />);
 
     expect(html).not.toContain("Overall score");
     expect(html).not.toContain("Total score");
+  });
+
+  it("renders explicit empty states when language mix and caveats are absent", () => {
+    const html = renderToStaticMarkup(
+      <ReportCardView
+        analysis={{
+          ...analysis,
+          reportCard: {
+            ...reportCard,
+            caveats: [],
+          },
+          dashboardInsights: {
+            ...analysis.dashboardInsights,
+            languageMix: [],
+          },
+        }}
+      />,
+    );
+
+    expect(html).toContain(
+      "No language mix was available in the collected evidence.",
+    );
+    expect(html).toContain("No caveats were reported.");
   });
 });

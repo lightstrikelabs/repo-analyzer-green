@@ -7,6 +7,7 @@ import {
   type AnalyzeRepositoryInput,
   type AnalyzeRepositoryResult,
 } from "../../../application/analyze-repository/analyze-repository";
+import { buildAnalyzeRepositoryResponse } from "../../../application/analyze-repository/analyze-repository-response";
 import { LocalFixtureRepositorySource } from "../../../infrastructure/filesystem/local-fixture-repository-source";
 import { FakeReviewer } from "../../../infrastructure/reviewer/fake-reviewer";
 import {
@@ -87,9 +88,7 @@ export async function handleAnalyzeRequest(
       });
     }
 
-    return Response.json({
-      reportCard: result.reportCard,
-    });
+    return Response.json(buildAnalyzeRepositoryResponse(result));
   } catch (error) {
     if (error instanceof RepositorySourceError) {
       return repositorySourceErrorResponse(error);

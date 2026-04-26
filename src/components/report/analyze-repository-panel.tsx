@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import type { ReportCard } from "../../domain/report/report-card";
+import {
+  AnalyzeRepositoryResponseSchema,
+  type AnalyzeRepositoryResponse,
+} from "../../application/analyze-repository/analyze-repository-response";
 import { ReportCardView } from "./report-card-view";
 
 type AnalyzeState =
@@ -14,15 +17,60 @@ type AnalyzeState =
     }
   | {
       readonly kind: "loaded";
-      readonly reportCard: ReportCard;
+      readonly analysis: AnalyzeRepositoryResponse;
     }
   | {
       readonly kind: "error";
       readonly message: string;
     };
 
+type LoadingPhase = {
+  readonly title: string;
+  readonly detail: string;
+  readonly progress: number;
+};
+
+const loadingPhases: readonly [LoadingPhase, ...LoadingPhase[]] = [
+  {
+    title: "Collecting repository evidence",
+    detail: "Inventorying files, manifests, workflows, and omissions.",
+    progress: 28,
+  },
+  {
+    title: "Measuring code shape",
+    detail: "Summarizing language mix, code lines, tests, and caveats.",
+    progress: 52,
+  },
+  {
+    title: "Reviewing dimensions",
+    detail: "Combining deterministic evidence with reviewer assessment.",
+    progress: 76,
+  },
+  {
+    title: "Preparing report card",
+    detail: "Linking findings, confidence, caveats, and evidence references.",
+    progress: 92,
+  },
+];
+
 export function AnalyzeRepositoryPanel() {
   const [state, setState] = useState<AnalyzeState>({ kind: "idle" });
+  const [loadingPhaseIndex, setLoadingPhaseIndex] = useState(0);
+
+  useEffect(() => {
+    if (state.kind !== "loading") {
+      setLoadingPhaseIndex(0);
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setLoadingPhaseIndex((current) =>
+        Math.min(current + 1, loadingPhases.length - 1),
+      );
+    }, 1_200);
+
+    return () => window.clearInterval(intervalId);
+  }, [state.kind]);
 
   async function analyzeRepository() {
     setState({ kind: "loading" });
@@ -41,8 +89,9 @@ export function AnalyzeRepositoryPanel() {
       }),
     });
     const body: unknown = await response.json();
+    const parseResult = AnalyzeRepositoryResponseSchema.safeParse(body);
 
-    if (!response.ok || !isReportResponse(body)) {
+    if (!response.ok || !parseResult.success) {
       setState({
         kind: "error",
         message:
@@ -53,7 +102,7 @@ export function AnalyzeRepositoryPanel() {
 
     setState({
       kind: "loaded",
-      reportCard: body.reportCard,
+      analysis: parseResult.data,
     });
   }
 
@@ -89,7 +138,11 @@ export function AnalyzeRepositoryPanel() {
 
       <main className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-5">
         {state.kind === "loaded" ? (
-          <ReportCardView reportCard={state.reportCard} />
+          <ReportCardView analysis={state.analysis} />
+        ) : state.kind === "loading" ? (
+          <AnalysisLoadingState
+            phase={loadingPhases[loadingPhaseIndex] ?? loadingPhases[0]}
+          />
         ) : (
           <section className="flex min-h-[520px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white p-6 text-center">
             <div>
@@ -108,14 +161,27 @@ export function AnalyzeRepositoryPanel() {
   );
 }
 
-function isReportResponse(
-  value: unknown,
-): value is { readonly reportCard: ReportCard } {
+function AnalysisLoadingState({ phase }: { readonly phase: LoadingPhase }) {
   return (
-    typeof value === "object" &&
-    value !== null &&
-    "reportCard" in value &&
-    typeof value.reportCard === "object" &&
-    value.reportCard !== null
+    <section className="flex min-h-[520px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white p-6 text-center">
+      <div className="w-full max-w-md">
+        <p className="text-sm font-medium uppercase text-emerald-700">
+          Analysis in progress
+        </p>
+        <h2 className="mt-3 text-lg font-semibold text-slate-950">
+          {phase.title}
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-700">{phase.detail}</p>
+        <div
+          className="mt-5 h-2 overflow-hidden rounded-full bg-slate-200"
+          aria-label={`Analysis ${phase.progress}% complete`}
+        >
+          <div
+            className="h-full rounded-full bg-emerald-600 transition-[width]"
+            style={{ width: `${phase.progress}%` }}
+          />
+        </div>
+      </div>
+    </section>
   );
 }

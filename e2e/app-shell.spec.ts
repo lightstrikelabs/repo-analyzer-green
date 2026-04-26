@@ -19,5 +19,7 @@ test("runs the repository analysis workflow", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Caveats And Missing Evidence" }),
   ).toBeVisible();
-  await expect(page.getByText("evidence:test-file")).toBeVisible();
+  await expect(
+    page.getByLabel("Dimensions").getByText("evidence:test-file").first(),
+  ).toBeVisible();
 });

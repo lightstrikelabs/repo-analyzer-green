@@ -4,6 +4,7 @@ import type {
   AnalyzeRepositoryReportCardResult,
   AnalyzeRepositoryResult,
 } from "../../../application/analyze-repository/analyze-repository";
+import { buildAnalyzeRepositoryResponse } from "../../../application/analyze-repository/analyze-repository-response";
 import { RepositorySourceError } from "../../../domain/repository/repository-source";
 import { handleAnalyzeRequest } from "./route";
 
@@ -87,19 +88,36 @@ const reportResult: AnalyzeRepositoryReportCardResult = {
     },
     languageCodeShapeMetrics: {
       summary: {
-        analyzedFileCount: 0,
-        sourceFileCount: 0,
-        testFileCount: 0,
+        analyzedFileCount: 2,
+        sourceFileCount: 1,
+        testFileCount: 1,
         documentationFileCount: 0,
         largeFileCount: 0,
         skippedFileCount: 0,
         unsupportedFileCount: 0,
-        totalTextLineCount: 0,
-        totalCodeLineCount: 0,
+        totalTextLineCount: 12,
+        totalCodeLineCount: 10,
         totalDeferredWorkMarkerCount: 0,
         totalBranchLikeTokenCount: 0,
       },
-      languageMix: [],
+      languageMix: [
+        {
+          language: "TypeScript",
+          extensions: [".ts"],
+          fileCount: 2,
+          sourceFileCount: 1,
+          textLineCount: 12,
+          codeLineCount: 10,
+          evidenceReferences: [
+            {
+              id: "language-code-shape:file:src/add.ts",
+              kind: "file",
+              label: "TypeScript file",
+              path: "src/add.ts",
+            },
+          ],
+        },
+      ],
       files: [],
       deferredWorkMarkers: [],
       branchLikeTokens: [],
@@ -162,9 +180,7 @@ describe("POST /api/analyze", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({
-      reportCard: reportResult.reportCard,
-    });
+    expect(body).toEqual(buildAnalyzeRepositoryResponse(reportResult));
   });
 
   it("returns 400 for invalid request bodies", async () => {
