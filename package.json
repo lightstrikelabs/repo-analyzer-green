@@ -23,6 +23,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:red-parity": "RED_UI_PARITY=1 playwright test e2e/red-ui-parity.spec.ts",
     "check": "pnpm run type-escape:check && pnpm run barrel-files:check && pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "ci": "pnpm check && pnpm build && pnpm test:e2e"
   },
