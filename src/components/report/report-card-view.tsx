@@ -10,6 +10,7 @@ import type {
   AnalyzeRepositoryResponse,
   DashboardLanguageMixItem,
 } from "../../application/analyze-repository/analyze-repository-response";
+import { FollowUpPanel } from "../chat/follow-up-panel";
 
 export function ReportCardView({
   analysis,
@@ -180,6 +181,8 @@ export function ReportCardView({
           ))}
         </ul>
       </section>
+
+      <FollowUpPanel analysis={analysis} />
     </article>
   );
 }
