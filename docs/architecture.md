@@ -572,6 +572,9 @@ Required seams:
 - Domain objects do not import database clients, ORM types, or auth provider types
 - User-supplied credentials are request-scoped unless encrypted persistence is explicitly designed
 - Browser-local session adapters may store repository form state, selected model preference, latest report cards, and follow-up chat threads for anonymous use, but they must validate schema versions and discard invalid saved data cleanly
+- Browser-local state should live behind a single versioned envelope so form state, latest report, and per-report follow-up threads restore together instead of through ad hoc keys
+- Local snapshot failures should fall back to defaults rather than partially resurrecting stale or incompatible state
+- The same application services should be able to move this state into repository ports later without changing domain models or UI contracts
 
 Likely future persistence:
 - Relational database for users, workspaces, reports, conversations, and metadata

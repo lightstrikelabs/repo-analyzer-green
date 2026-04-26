@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { z } from "zod";
 
 import type { AnalyzeRepositoryResponse } from "../../application/analyze-repository/analyze-repository-response";
 import {
@@ -14,49 +13,22 @@ import type {
   ChatAnswer,
   ChatAnswerContract,
 } from "../../domain/chat/chat-answer";
-import { ChatAnswerContractSchema } from "../../domain/chat/chat-answer";
-import {
-  ConversationSchema,
-  ConversationTargetSchema,
-  type Conversation,
-  type ConversationTarget,
+import type {
+  Conversation,
+  ConversationTarget,
 } from "../../domain/chat/conversation";
 import type { ConversationTargetSelector } from "../../domain/chat/conversation-target-resolver";
 import type { EvidenceContentResult } from "../../domain/chat/evidence-retrieval";
 import type { EvidenceReference } from "../../domain/shared/evidence-reference";
+import {
+  loadBrowserFollowUpState,
+  saveBrowserFollowUpState,
+  type BrowserFollowUpSession,
+  type BrowserFollowUpState,
+} from "../../infrastructure/persistence/browser-local-session-storage";
 import { InMemoryConversationRepository } from "../../infrastructure/persistence/in-memory-conversation-repository";
 
-type FollowUpSession = {
-  readonly conversation: Conversation;
-  readonly target: ConversationTarget;
-  readonly answer: ChatAnswerContract;
-  readonly evidenceSummary: string;
-  readonly title: string;
-};
-
-type StoredFollowUpState = {
-  readonly sessions: FollowUpSession[];
-  readonly activeConversationId: string | null;
-};
-
-const StoredFollowUpSessionSchema = z
-  .object({
-    conversation: ConversationSchema,
-    target: ConversationTargetSchema,
-    answer: ChatAnswerContractSchema,
-    evidenceSummary: z.string(),
-    title: z.string(),
-  })
-  .strict();
-
-const StoredFollowUpStateSchema = z
-  .object({
-    sessions: z.array(StoredFollowUpSessionSchema),
-    activeConversationId: z.string().nullable(),
-  })
-  .strict();
-
-const storagePrefix = "repo-analyzer-green.follow-up";
+type FollowUpSession = BrowserFollowUpSession;
 
 export function FollowUpPanel({
   analysis,
@@ -79,15 +51,19 @@ export function FollowUpPanel({
   const contentSource = useMemo(() => createContentSource(), []);
 
   useEffect(() => {
-    const stored = readStoredState(reportCard.id);
-    setSessions(stored.sessions);
+    const stored = loadBrowserFollowUpState(window.localStorage, reportCard.id);
+    const nextState: BrowserFollowUpState = stored ?? {
+      sessions: [],
+      activeConversationId: null,
+    };
+    setSessions(nextState.sessions);
     setActiveConversationId(
-      stored.activeConversationId ??
-        stored.sessions[0]?.conversation.id ??
+      nextState.activeConversationId ??
+        nextState.sessions[0]?.conversation.id ??
         null,
     );
     conversationRepository.replaceAll(
-      stored.sessions.map((session) => session.conversation),
+      nextState.sessions.map((session) => session.conversation),
     );
     setHydrated(true);
   }, [conversationRepository, reportCard.id]);
@@ -97,7 +73,10 @@ export function FollowUpPanel({
       return;
     }
 
-    persistState(reportCard.id, { sessions, activeConversationId });
+    saveBrowserFollowUpState(window.localStorage, reportCard.id, {
+      sessions,
+      activeConversationId,
+    });
   }, [activeConversationId, hydrated, reportCard.id, sessions]);
 
   const dependencies = useMemo<FollowUpChatDependencies>(
@@ -676,35 +655,6 @@ function targetErrorMessage(result: { readonly kind: string }): string {
   return result.kind === "conversation-not-found"
     ? "Conversation not found."
     : "Selected target could not be resolved.";
-}
-
-function persistState(reportId: string, state: StoredFollowUpState) {
-  window.localStorage.setItem(storageKey(reportId), JSON.stringify(state));
-}
-
-function readStoredState(reportId: string): StoredFollowUpState {
-  const raw = window.localStorage.getItem(storageKey(reportId));
-  if (raw === null) {
-    return {
-      sessions: [],
-      activeConversationId: null,
-    };
-  }
-
-  try {
-    return StoredFollowUpStateSchema.parse(JSON.parse(raw));
-  } catch {
-    // Ignore malformed local state.
-  }
-
-  return {
-    sessions: [],
-    activeConversationId: null,
-  };
-}
-
-function storageKey(reportId: string): string {
-  return `${storagePrefix}:${reportId}`;
 }
 
 function createDemoChatReviewer(): ChatReviewer {

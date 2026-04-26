@@ -298,6 +298,9 @@ Design constraints:
 - Large evidence artifacts may need object storage or compressed blobs rather than normal relational rows
 - Conversation messages should store citations and model metadata separately from rendered Markdown
 - Repository analysis should be reproducible from saved evidence and reviewer assessment versions when possible
+- Browser-local MVP state should be stored in a single versioned session envelope that can restore repository form state, latest report output, and per-report follow-up threads together
+- Invalid or version-mismatched browser-local snapshots should be discarded and rebuilt from defaults rather than partially trusted
+- User credentials and API keys should remain request-scoped unless encrypted persistence is explicitly designed
 
 ### Presentation
 
