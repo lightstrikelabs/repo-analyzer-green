@@ -1,11 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 
 import {
   AnalyzeRepositoryResponseSchema,
   type AnalyzeRepositoryResponse,
 } from "../../application/analyze-repository/analyze-repository-response";
+import { GitHubRepositoryUrlSchema } from "../../infrastructure/github/github-repository-url";
+import {
+  OpenRouterDefaultModelId,
+  OpenRouterModelIdSchema,
+} from "../../infrastructure/llm/openrouter-config";
 import {
   clearBrowserLocalSession,
   defaultBrowserRepositoryForm,
@@ -35,24 +46,35 @@ type LoadingPhase = {
 
 const loadingPhases: readonly [LoadingPhase, ...LoadingPhase[]] = [
   {
-    title: "Collecting repository evidence",
-    detail: "Inventorying files, manifests, workflows, and omissions.",
-    progress: 28,
+    title: "Cloning repository",
+    detail: "Fetching the GitHub snapshot and preparing it for analysis.",
+    progress: 16,
   },
   {
-    title: "Measuring code shape",
-    detail: "Summarizing language mix, code lines, tests, and caveats.",
-    progress: 52,
+    title: "Mapping files",
+    detail: "Classifying source, tests, docs, generated files, and omissions.",
+    progress: 32,
   },
   {
-    title: "Reviewing dimensions",
-    detail: "Combining deterministic evidence with reviewer assessment.",
-    progress: 76,
+    title: "Scoring quality",
+    detail: "Combining deterministic evidence with the domain scoring policy.",
+    progress: 50,
   },
   {
-    title: "Preparing report card",
-    detail: "Linking findings, confidence, caveats, and evidence references.",
-    progress: 92,
+    title: "Checking tests and release gates",
+    detail: "Looking for verification, CI, scripts, and release readiness.",
+    progress: 66,
+  },
+  {
+    title: "Scanning security and docs",
+    detail:
+      "Reviewing dependency hygiene, secrets risk, and onboarding signals.",
+    progress: 82,
+  },
+  {
+    title: "Writing reviewer notes",
+    detail: "Preparing evidence-backed findings, confidence, and caveats.",
+    progress: 94,
   },
 ];
 
@@ -62,6 +84,7 @@ export function AnalyzeRepositoryPanel() {
   const [repositoryForm, setRepositoryForm] = useState<BrowserRepositoryForm>(
     () => defaultBrowserRepositoryForm(),
   );
+  const [apiKey, setApiKey] = useState("");
   const [latestReport, setLatestReport] =
     useState<AnalyzeRepositoryResponse | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -119,7 +142,41 @@ export function AnalyzeRepositoryPanel() {
     return { kind: "idle" as const };
   }, [latestReport, loadingPhaseIndex, status.kind]);
 
-  async function analyzeRepository() {
+  async function analyzeRepository(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const repositoryUrlResult = GitHubRepositoryUrlSchema.safeParse(
+      repositoryForm.repoUrl,
+    );
+    if (!repositoryUrlResult.success) {
+      setStatus({
+        kind: "error",
+        message: "Enter a valid GitHub repository URL.",
+      });
+      return;
+    }
+
+    const normalizedRepositoryUrl = repositoryUrlResult.data.url;
+    if (normalizedRepositoryUrl === undefined) {
+      setStatus({
+        kind: "error",
+        message: "Enter a valid GitHub repository URL.",
+      });
+      return;
+    }
+
+    const modelResult = OpenRouterModelIdSchema.safeParse(
+      repositoryForm.selectedModel,
+    );
+    if (!modelResult.success) {
+      setStatus({
+        kind: "error",
+        message: "Enter a valid OpenRouter model id.",
+      });
+      return;
+    }
+
+    const trimmedApiKey = apiKey.trim();
     setStatus({ kind: "loading" });
 
     const response = await fetch("/api/analyze", {
@@ -128,19 +185,9 @@ export function AnalyzeRepositoryPanel() {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        repository: {
-          provider: repositoryForm.provider,
-          name: repositoryForm.name,
-          ...(repositoryForm.owner === undefined
-            ? {}
-            : { owner: repositoryForm.owner }),
-          ...(repositoryForm.url === undefined
-            ? {}
-            : { url: repositoryForm.url }),
-          ...(repositoryForm.revision === undefined
-            ? {}
-            : { revision: repositoryForm.revision }),
-        },
+        repoUrl: normalizedRepositoryUrl,
+        ...(trimmedApiKey.length === 0 ? {} : { apiKey: trimmedApiKey }),
+        model: modelResult.data,
       }),
     });
     const body: unknown = await response.json();
@@ -149,8 +196,7 @@ export function AnalyzeRepositoryPanel() {
     if (!response.ok || !parseResult.success) {
       setStatus({
         kind: "error",
-        message:
-          "Analysis failed. Check the repository evidence and try again.",
+        message: "Analysis failed. Check the repository URL and try again.",
       });
       return;
     }
@@ -162,10 +208,7 @@ export function AnalyzeRepositoryPanel() {
   function updateRepositoryForm(
     updater: (current: BrowserRepositoryForm) => BrowserRepositoryForm,
   ) {
-    setRepositoryForm((current) => {
-      const next = updater(current);
-      return next;
-    });
+    setRepositoryForm((current) => updater(current));
     setLatestReport(null);
     if (status.kind === "error") {
       setStatus({ kind: "idle" });
@@ -175,175 +218,119 @@ export function AnalyzeRepositoryPanel() {
   function resetSavedSession() {
     clearBrowserLocalSession(window.localStorage);
     setRepositoryForm(defaultBrowserRepositoryForm());
+    setApiKey("");
     setLatestReport(null);
     setStatus({ kind: "idle" });
   }
 
   return (
-    <div className="grid min-h-screen gap-6 px-6 py-6 lg:grid-cols-[360px_1fr]">
-      <aside className="rounded-md border border-slate-200 bg-white p-5 print:hidden">
-        <p className="text-sm font-medium uppercase text-emerald-700">
-          Repo Analyzer Green
-        </p>
-        <h1 className="mt-3 text-2xl font-semibold text-slate-950">
-          Repository analysis
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-slate-700">
-          Run the repository analysis workflow to produce a report card with
-          dimensions, evidence, confidence, caveats, and follow-up questions.
-        </p>
-
-        <section className="mt-5 space-y-4 rounded-md border border-slate-200 bg-slate-50 p-4">
-          <div className="flex items-start justify-between gap-3">
+    <div className="min-h-screen bg-stone-50 text-slate-950">
+      <section className="border-b border-slate-200 bg-white px-4 py-5 print:hidden sm:px-6">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-sm font-medium uppercase text-emerald-700">
-                Browser session
+              <p className="text-sm font-semibold text-emerald-700">
+                Repository Quality
               </p>
-              <p className="mt-1 text-sm leading-6 text-slate-700">
-                Repository settings and the latest report are restored from this
-                browser only.
-              </p>
+              <h1 className="mt-1 text-3xl font-semibold text-slate-950">
+                Report Card
+              </h1>
             </div>
             <button
               type="button"
               onClick={resetSavedSession}
-              className="rounded-md border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-white"
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
               Reset
             </button>
           </div>
 
-          <div className="grid gap-3">
-            <Field label="Provider">
-              <select
-                value={repositoryForm.provider}
-                onChange={(event) =>
-                  updateRepositoryForm((current) => ({
-                    ...current,
-                    provider: event.target
-                      .value as BrowserRepositoryForm["provider"],
-                  }))
-                }
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-400"
-                disabled={status.kind === "loading"}
-              >
-                <option value="local-fixture">local-fixture</option>
-                <option value="github">github</option>
-              </select>
-            </Field>
-
-            <Field label="Repository name">
+          <form
+            noValidate
+            onSubmit={analyzeRepository}
+            className="mt-5 grid gap-3 lg:grid-cols-[minmax(240px,1fr)_minmax(220px,320px)_auto]"
+          >
+            <Field label="GitHub repository URL">
               <input
-                value={repositoryForm.name}
+                type="url"
+                inputMode="url"
+                autoComplete="url"
+                value={repositoryForm.repoUrl}
                 onChange={(event) =>
                   updateRepositoryForm((current) => ({
                     ...current,
-                    name: event.target.value,
+                    repoUrl: event.target.value,
                   }))
                 }
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-400"
+                placeholder="https://github.com/owner/repo"
+                className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500"
                 disabled={status.kind === "loading"}
               />
             </Field>
 
-            <Field label="Revision">
+            <Field label="OpenRouter API key">
               <input
-                value={repositoryForm.revision ?? ""}
-                onChange={(event) =>
-                  updateRepositoryForm((current) => ({
-                    ...current,
-                    revision:
-                      event.target.value.length === 0
-                        ? undefined
-                        : event.target.value,
-                  }))
-                }
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-400"
+                type="password"
+                autoComplete="off"
+                value={apiKey}
+                onChange={(event) => setApiKey(event.target.value)}
+                className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500"
                 disabled={status.kind === "loading"}
               />
             </Field>
 
-            <details className="rounded-md border border-slate-200 bg-white p-3">
-              <summary className="cursor-pointer text-sm font-medium text-slate-800">
-                Advanced repository details
+            <button
+              type="submit"
+              disabled={status.kind === "loading"}
+              className="h-11 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {status.kind === "loading" ? "Analyzing" : "Analyze"}
+            </button>
+
+            <details className="lg:col-span-3">
+              <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+                Advanced
               </summary>
-              <div className="mt-3 grid gap-3">
-                <Field label="Owner">
+              <div className="mt-3 grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[minmax(220px,420px)_auto]">
+                <Field label="OpenRouter Model">
                   <input
-                    value={repositoryForm.owner ?? ""}
+                    value={repositoryForm.selectedModel}
                     onChange={(event) =>
                       updateRepositoryForm((current) => ({
                         ...current,
-                        owner:
-                          event.target.value.length === 0
-                            ? undefined
-                            : event.target.value,
+                        selectedModel: event.target.value,
                       }))
                     }
-                    className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-400"
+                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500"
                     disabled={status.kind === "loading"}
                   />
                 </Field>
-
-                <Field label="Repository URL">
-                  <input
-                    value={repositoryForm.url ?? ""}
-                    onChange={(event) =>
-                      updateRepositoryForm((current) => ({
-                        ...current,
-                        url:
-                          event.target.value.length === 0
-                            ? undefined
-                            : event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-400"
-                    disabled={status.kind === "loading"}
-                  />
-                </Field>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateRepositoryForm((current) => ({
+                      ...current,
+                      selectedModel: OpenRouterDefaultModelId,
+                    }))
+                  }
+                  disabled={status.kind === "loading"}
+                  className="h-10 self-end rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                >
+                  Use Free Router
+                </button>
               </div>
             </details>
-
-            <Field label="Reviewer model preference">
-              <input
-                value={repositoryForm.selectedModel}
-                onChange={(event) =>
-                  updateRepositoryForm((current) => ({
-                    ...current,
-                    selectedModel: event.target.value,
-                  }))
-                }
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-400"
-                disabled={status.kind === "loading"}
-              />
-            </Field>
-          </div>
-
-          <p className="text-xs leading-5 text-slate-600">
-            This browser stores the repository form, selected model preference,
-            and the latest successful report. API keys are not persisted here.
-          </p>
-
-          <button
-            type="button"
-            onClick={analyzeRepository}
-            disabled={status.kind === "loading"}
-            className="w-full rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
-            {status.kind === "loading"
-              ? "Analyzing repository..."
-              : "Analyze repository"}
-          </button>
+          </form>
 
           {status.kind === "error" ? (
-            <p role="alert" className="text-sm text-red-700">
+            <p role="alert" className="mt-3 text-sm font-medium text-red-700">
               {status.message}
             </p>
           ) : null}
-        </section>
-      </aside>
+        </div>
+      </section>
 
-      <main className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-5">
+      <main className="mx-auto min-w-0 max-w-7xl px-4 py-6 sm:px-6">
         {reportContent.kind === "loaded" ? (
           <ReportCardView analysis={reportContent.analysis} />
         ) : reportContent.kind === "loading" ? (
@@ -352,11 +339,10 @@ export function AnalyzeRepositoryPanel() {
           <section className="flex min-h-[520px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white p-6 text-center">
             <div>
               <h2 className="text-lg font-semibold text-slate-950">
-                No report generated yet
+                No report loaded
               </h2>
               <p className="mt-2 max-w-md text-sm leading-6 text-slate-700">
-                Start an analysis to generate dimensions, findings, confidence,
-                caveats, and evidence references.
+                Enter a repository URL to begin.
               </p>
             </div>
           </section>
@@ -375,7 +361,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+      <span className="mb-1 block text-sm font-medium text-slate-700">
         {label}
       </span>
       {children}

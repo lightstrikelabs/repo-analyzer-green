@@ -7,15 +7,18 @@ import {
   ConversationTargetSchema,
 } from "../../domain/chat/conversation";
 import {
-  RepositoryIdentitySchema,
-  type RepositoryIdentity,
-} from "../../domain/report/report-card";
+  OpenRouterDefaultModelId,
+  OpenRouterModelIdSchema,
+} from "../llm/openrouter-config";
 
 export const BrowserLocalSessionSchemaVersion = "browser-local-session.v1";
 
-export const BrowserRepositoryFormSchema = RepositoryIdentitySchema.extend({
-  selectedModel: z.string().min(1),
-}).strict();
+export const BrowserRepositoryFormSchema = z
+  .object({
+    repoUrl: z.string(),
+    selectedModel: OpenRouterModelIdSchema,
+  })
+  .strict();
 
 export type BrowserRepositoryForm = z.infer<typeof BrowserRepositoryFormSchema>;
 
@@ -152,42 +155,8 @@ export function clearBrowserLocalSession(storage: BrowserStorageLike): void {
 
 export function defaultBrowserRepositoryForm(): BrowserRepositoryForm {
   return {
-    provider: "local-fixture",
-    name: "minimal-node-library",
-    revision: "fixture",
-    selectedModel: "fixture-default",
-  };
-}
-
-export function browserRepositoryIdentityFromForm(
-  form: BrowserRepositoryForm,
-): RepositoryIdentity {
-  return {
-    provider: form.provider,
-    name: form.name,
-    ...(form.owner === undefined ? {} : { owner: form.owner }),
-    ...(form.url === undefined ? {} : { url: form.url }),
-    ...(form.revision === undefined ? {} : { revision: form.revision }),
-    ...(form.defaultBranch === undefined
-      ? {}
-      : { defaultBranch: form.defaultBranch }),
-  };
-}
-
-export function browserRepositoryFormFromIdentity(
-  identity: RepositoryIdentity,
-  selectedModel = "fixture-default",
-): BrowserRepositoryForm {
-  return {
-    provider: identity.provider,
-    name: identity.name,
-    ...(identity.owner === undefined ? {} : { owner: identity.owner }),
-    ...(identity.url === undefined ? {} : { url: identity.url }),
-    ...(identity.revision === undefined ? {} : { revision: identity.revision }),
-    ...(identity.defaultBranch === undefined
-      ? {}
-      : { defaultBranch: identity.defaultBranch }),
-    selectedModel,
+    repoUrl: "",
+    selectedModel: OpenRouterDefaultModelId,
   };
 }
 
