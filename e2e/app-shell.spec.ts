@@ -23,3 +23,19 @@ test("runs the repository analysis workflow", async ({ page }) => {
     page.getByLabel("Dimensions").getByText("evidence:test-file").first(),
   ).toBeVisible();
 });
+
+test("starts a follow-up thread from the report view", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Analyze repository" }).click();
+
+  await expect(page.getByText("Follow-up").first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Ask about report" }).first().click();
+
+  await expect(
+    page.getByText("Report: What should we inspect first?").first(),
+  ).toBeVisible();
+  await expect(page.getByText("Evidence summary")).toBeVisible();
+  await expect(page.getByText("Evidence-backed answer")).toBeVisible();
+  await expect(page.getByText("Relevant evidence from").first()).toBeVisible();
+});
