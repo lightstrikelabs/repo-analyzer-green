@@ -50,6 +50,8 @@ PLAYWRIGHT_BASE_URL=<preview-url> pnpm test:e2e
 
 Vercel preview deployments may be protected by Vercel Authentication. For automated preview E2E, enable Vercel Protection Bypass for Automation and store the generated value as the GitHub Actions secret `VERCEL_AUTOMATION_BYPASS_SECRET`.
 
+See [How To Run Preview E2E Against Protected Vercel Deployments](how-tos/vercel-preview-e2e.md) for the setup and verification steps.
+
 When the secret is present, Playwright sends:
 
 ```text
@@ -57,7 +59,7 @@ x-vercel-protection-bypass: <secret>
 x-vercel-set-bypass-cookie: true
 ```
 
-When the secret is missing, the preview workflow emits a GitHub notice and skips the browser run instead of logging protected page contents or failing with an authentication page assertion.
+For protected preview deployments, this secret is required for Preview E2E to exercise the application instead of Vercel's deployment protection page.
 
 References:
 - [Vercel: Methods to bypass Deployment Protection](https://vercel.com/docs/security/deployment-protection/methods-to-bypass-deployment-protection)
