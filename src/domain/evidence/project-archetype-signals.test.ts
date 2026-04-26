@@ -89,7 +89,7 @@ describe("detectProjectArchetypeSignals", () => {
       ],
     });
 
-    expect(result.candidates[0]?.archetype).toBe("infrastructure-module");
+    expect(result.candidates[0]?.archetype).toBe("infrastructure");
   });
 
   it("detects a docs-heavy repo from documentation density and docs tooling", () => {

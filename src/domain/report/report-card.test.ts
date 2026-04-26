@@ -131,6 +131,15 @@ describe("report card domain models", () => {
     });
   });
 
+  it("accepts a docs-heavy repository archetype", () => {
+    const parsed = ReportCardInputSchema.parse({
+      ...reportCardInput,
+      assessedArchetype: "docs-heavy",
+    });
+
+    expect(parsed.assessedArchetype).toBe("docs-heavy");
+  });
+
   it("rejects dimension confidence outside the normalized range", () => {
     const result = ReportCardInputSchema.safeParse({
       ...reportCardInput,

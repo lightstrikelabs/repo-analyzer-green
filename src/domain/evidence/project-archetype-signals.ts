@@ -1,14 +1,17 @@
+import type { ProjectArchetype } from "../report/report-card";
 import type { Confidence } from "../shared/confidence";
 import type { EvidenceReference } from "../shared/evidence-reference";
 
-export type DetectedProjectArchetype =
+export type DetectedProjectArchetype = Extract<
+  ProjectArchetype,
   | "web-app"
   | "library"
   | "cli"
-  | "infrastructure-module"
+  | "infrastructure"
   | "docs-heavy"
   | "generated-sdk"
-  | "unknown";
+  | "unknown"
+>;
 
 export type PackageJsonManifestSignal = {
   readonly kind: "package-json";
@@ -275,7 +278,7 @@ function scoreInfrastructureModule(
     references.push(fileInventoryReference);
   }
 
-  return createScoredCandidate("infrastructure-module", signals, references);
+  return createScoredCandidate("infrastructure", signals, references);
 }
 
 function scoreDocsHeavy(
