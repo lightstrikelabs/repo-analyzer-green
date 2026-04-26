@@ -54,6 +54,7 @@ If a task conflicts with those documents, call out the conflict before editing. 
 - Do not merge work that bypasses failing checks unless there is an explicit documented exception.
 - Use Conventional Commits for all commit subjects.
 - Include a high-signal commit body with a second `-m` for non-trivial changes so future `git blame` readers can understand intent and tradeoffs.
+- Include GitHub references in non-trivial commit bodies once known: `Issue: #<number>` and `PR: #<number>`.
 
 ## 5. Respect Software Fundamentals
 
