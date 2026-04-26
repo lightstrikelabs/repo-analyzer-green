@@ -69,6 +69,7 @@ pnpm run ci
 The scaffold intentionally contains only the application shell, architecture folders, and tooling. Repository analysis, reviewer assessment, persistence, auth, and deployment integrations are tracked as separate issues.
 
 See [docs/development-plan.md](docs/development-plan.md) for the milestone and issue plan.
+See [docs/red-parity.md](docs/red-parity.md) for the feature parity map against `repo-analyzer-red`.
 See [docs/commit-messages.md](docs/commit-messages.md) for commit and PR title standards.
 See [docs/fixtures.md](docs/fixtures.md) for repository fixture rules.
 See [docs/architecture.md](docs/architecture.md#test-placement) for test placement rules.

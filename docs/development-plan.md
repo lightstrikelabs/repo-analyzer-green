@@ -21,6 +21,8 @@ Repository Source
 
 See [architecture.md](architecture.md) for stack choices, validation strategy, CI gates, and auth/database readiness.
 
+See [red-parity.md](red-parity.md) for the feature parity map against `repo-analyzer-red` and the issue sequence for reaching parity without copying red's architecture.
+
 ## Foundational Decisions
 
 1. Static metrics are evidence, not final judgments.
