@@ -112,9 +112,13 @@ export async function analyzeRepository(
   const evidenceBundle = await evidenceCollector({
     repository: input.repository,
     repositorySource: dependencies.repositorySource,
-    options: {
-      fileInventoryOptions: dependencies.fileInventoryOptions,
-    },
+    ...(dependencies.fileInventoryOptions === undefined
+      ? {}
+      : {
+          options: {
+            fileInventoryOptions: dependencies.fileInventoryOptions,
+          },
+        }),
   });
   const reviewerResult = await dependencies.reviewer.assess({
     repository: evidenceBundle.repository,
