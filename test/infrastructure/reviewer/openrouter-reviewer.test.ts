@@ -161,6 +161,31 @@ describe("OpenRouterReviewer", () => {
     });
   });
 
+  it("accepts reviewer JSON wrapped in common model formatting", async () => {
+    const reviewer = new OpenRouterReviewer({
+      chatProvider: completionProviderForContent(
+        [
+          "Here is the structured reviewer assessment:",
+          "",
+          "```json",
+          JSON.stringify(assessment),
+          "```",
+        ].join("\n"),
+      ),
+      config: {
+        provider: "openrouter",
+        apiKey: "sk-or-v1-test",
+        model: OpenRouterDefaultModelId,
+        baseUrl: "https://openrouter.ai/api/v1",
+      },
+      now: () => new Date("2026-04-26T12:00:00-07:00"),
+    });
+
+    const result = await reviewer.assess(request);
+
+    expect(result).toEqual({ kind: "assessment", assessment });
+  });
+
   it("returns malformed-response when model JSON does not match the reviewer assessment schema", async () => {
     const malformedContent = JSON.stringify({
       schemaVersion: ReviewerAssessmentSchemaVersion,
