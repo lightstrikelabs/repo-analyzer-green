@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
 
-test("runs the fixture analysis workflow", async ({ page }) => {
+test("runs the repository analysis workflow", async ({ page }) => {
   await page.goto("/");
 
   await expect(
     page.getByRole("heading", { name: "Repository analysis" }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Analyze fixture" }).click();
+  await page.getByRole("button", { name: "Analyze repository" }).click();
 
   await expect(
     page.getByRole("heading", { name: "Evidence-backed report" }),

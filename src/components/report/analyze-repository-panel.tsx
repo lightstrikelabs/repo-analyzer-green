@@ -24,7 +24,7 @@ type AnalyzeState =
 export function AnalyzeRepositoryPanel() {
   const [state, setState] = useState<AnalyzeState>({ kind: "idle" });
 
-  async function analyzeFixture() {
+  async function analyzeRepository() {
     setState({ kind: "loading" });
 
     const response = await fetch("/api/analyze", {
@@ -67,16 +67,18 @@ export function AnalyzeRepositoryPanel() {
           Repository analysis
         </h1>
         <p className="mt-3 text-sm leading-6 text-slate-700">
-          Run the deterministic fixture path to produce a report card with
+          Run the repository analysis workflow to produce a report card with
           dimensions, evidence, confidence, caveats, and follow-up questions.
         </p>
         <button
           type="button"
-          onClick={analyzeFixture}
+          onClick={analyzeRepository}
           disabled={state.kind === "loading"}
           className="mt-5 w-full rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400"
         >
-          {state.kind === "loading" ? "Analyzing..." : "Analyze fixture"}
+          {state.kind === "loading"
+            ? "Analyzing repository..."
+            : "Analyze repository"}
         </button>
         {state.kind === "error" ? (
           <p role="alert" className="mt-4 text-sm text-red-700">
@@ -95,8 +97,8 @@ export function AnalyzeRepositoryPanel() {
                 No report generated yet
               </h2>
               <p className="mt-2 max-w-md text-sm leading-6 text-slate-700">
-                Start with the fixture workflow while GitHub, live reviewer, and
-                persistence adapters continue to evolve behind stable contracts.
+                Start an analysis to generate dimensions, findings, confidence,
+                caveats, and evidence references.
               </p>
             </div>
           </section>
