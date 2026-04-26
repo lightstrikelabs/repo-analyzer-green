@@ -212,7 +212,7 @@ Recommended script:
 }
 ```
 
-For this Next.js app, run route type generation before `tsc` and keep it aligned with `next build`. Do not force development-mode typegen in the scripted `typecheck` command; it rewrites `next-env.d.ts` to `.next/dev/types/routes.d.ts`, while `next build` rewrites the same generated file to `.next/types/routes.d.ts`.
+For this Next.js app, run route type generation before `tsc` and keep scripted typegen aligned with `next build`. Do not force development-mode typegen in the scripted `typecheck` command. `next-env.d.ts` is a Next-generated local file, ignored by git, because `next dev` rewrites it to `.next/dev/types/routes.d.ts` while `next build` rewrites it to `.next/types/routes.d.ts`.
 
 Recommended TypeScript posture:
 - `strict: true`
