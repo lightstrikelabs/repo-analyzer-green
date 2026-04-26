@@ -225,6 +225,29 @@ describe("POST /api/analyze", () => {
     });
   });
 
+  it("maps oversized repositories to 413 with diagnostic detail", async () => {
+    const response = await handleAnalyzeRequest(jsonRequest(validRequestBody), {
+      analyze: async () => {
+        throw new RepositorySourceError(
+          "Repository contains too many files to analyze.",
+          "repository-too-large",
+          validRequestBody.repository,
+          "File count 1201 exceeds the 1000 file inventory limit.",
+        );
+      },
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(413);
+    expect(body).toEqual({
+      error: {
+        code: "repository-too-large",
+        message: "Repository is too large to analyze.",
+        detail: "File count 1201 exceeds the 1000 file inventory limit.",
+      },
+    });
+  });
+
   it("maps malformed reviewer output to a bad gateway response", async () => {
     const malformedResult: AnalyzeRepositoryResult = {
       kind: "reviewer-malformed-response",

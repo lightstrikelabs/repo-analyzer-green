@@ -1,5 +1,6 @@
 import {
   collectFileInventory,
+  type FileInventoryOptions,
   type FileInventory,
   type InventoryOmission,
 } from "../../domain/evidence/file-inventory";
@@ -52,6 +53,7 @@ export type AnalyzeRepositoryDependencies = {
   readonly now?: () => Date;
   readonly createReportId?: (repository: RepositoryIdentity) => string;
   readonly evidenceCollector?: RepositoryEvidenceCollector;
+  readonly fileInventoryOptions?: FileInventoryOptions;
 };
 
 export type RepositoryEvidenceCollector = (
@@ -61,6 +63,9 @@ export type RepositoryEvidenceCollector = (
 export type CollectRepositoryEvidenceInput = {
   readonly repository: RepositoryReference;
   readonly repositorySource: RepositorySource;
+  readonly options?: {
+    readonly fileInventoryOptions?: FileInventoryOptions;
+  };
 };
 
 export type RepositoryEvidenceBundle = {
@@ -107,6 +112,13 @@ export async function analyzeRepository(
   const evidenceBundle = await evidenceCollector({
     repository: input.repository,
     repositorySource: dependencies.repositorySource,
+    ...(dependencies.fileInventoryOptions === undefined
+      ? {}
+      : {
+          options: {
+            fileInventoryOptions: dependencies.fileInventoryOptions,
+          },
+        }),
   });
   const reviewerResult = await dependencies.reviewer.assess({
     repository: evidenceBundle.repository,
@@ -155,6 +167,7 @@ export async function collectRepositoryEvidence(
   const fileInventory = await collectFileInventory(
     input.repository,
     input.repositorySource,
+    input.options?.fileInventoryOptions,
   );
   const textFiles = await readInventoryTextFiles(
     input.repository,

@@ -5,6 +5,7 @@ import type {
   RepositoryReference,
   RepositorySource,
 } from "../repository/repository-source";
+import { RepositorySourceError } from "../repository/repository-source";
 
 export type FileClassificationSignal =
   | "configuration"
@@ -42,9 +43,11 @@ export type FileInventory = {
 
 export type FileInventoryOptions = {
   readonly maxFileSizeBytes?: number;
+  readonly maxFileCount?: number;
 };
 
 const defaultMaxFileSizeBytes = 256 * 1024;
+const defaultMaxFileCount = 10_000;
 
 const ignoredDirectoryDetails = new Map<string, string>([
   [".git", "version-control metadata is ignored"],
@@ -134,9 +137,19 @@ export async function collectFileInventory(
   options: FileInventoryOptions = {},
 ): Promise<FileInventory> {
   const maxFileSizeBytes = options.maxFileSizeBytes ?? defaultMaxFileSizeBytes;
+  const maxFileCount = options.maxFileCount ?? defaultMaxFileCount;
   const entries = [...(await source.listFiles(repository))].sort(comparePaths);
   const files: InventoryFile[] = [];
   const omissions: InventoryOmission[] = [];
+
+  if (entries.length > maxFileCount) {
+    throw new RepositorySourceError(
+      "Repository contains too many files to analyze.",
+      "repository-too-large",
+      repository,
+      `File count ${entries.length} exceeds the ${maxFileCount} file inventory limit.`,
+    );
+  }
 
   for (const entry of entries) {
     const pathOmission = omissionFromPath(entry);

@@ -146,6 +146,12 @@ function repositorySourceErrorResponse(error: RepositorySourceError): Response {
         code: error.code,
         message: "Repository reference is invalid.",
       });
+    case "repository-too-large":
+      return jsonError(413, {
+        code: error.code,
+        message: "Repository is too large to analyze.",
+        ...(error.detail === undefined ? {} : { detail: error.detail }),
+      });
     case "file-not-found":
     case "repository-not-found":
       return jsonError(404, {
