@@ -74,4 +74,5 @@ See [docs/fixtures.md](docs/fixtures.md) for repository fixture rules.
 See [docs/architecture.md](docs/architecture.md#test-placement) for test placement rules.
 See [docs/deployment.md](docs/deployment.md) for Vercel deployment and preview E2E setup.
 See [docs/how-tos/vercel-preview-e2e.md](docs/how-tos/vercel-preview-e2e.md) for protected Vercel preview E2E setup.
+See [docs/how-tos/openrouter-e2e.md](docs/how-tos/openrouter-e2e.md) for OpenRouter-backed E2E secret setup.
 See [docs/architecture.md](docs/architecture.md#frontend-architecture) for frontend thin-screen and component rules.
