@@ -28,11 +28,45 @@ describe("LocalFixtureRepositorySource", () => {
       "src/add.ts",
       "test/add.spec.ts",
     ]);
-    expect(files[0]?.provenance).toEqual({
-      repository: minimalNodeLibrary,
-      sourceKind: "local-fixture",
-      sourceId: "minimal-node-library",
+    expect(files[0]).toEqual({
       path: "README.md",
+      sizeBytes: 252,
+      provenance: {
+        repository: minimalNodeLibrary,
+        sourceKind: "local-fixture",
+        sourceId: "minimal-node-library",
+        path: "README.md",
+      },
+    });
+    expect(files[2]).toEqual({
+      path: "src/add.ts",
+      sizeBytes: 84,
+      provenance: {
+        repository: minimalNodeLibrary,
+        sourceKind: "local-fixture",
+        sourceId: "minimal-node-library",
+        path: "src/add.ts",
+      },
+    });
+  });
+
+  it("reads file contents with byte size metadata", async () => {
+    const source = new LocalFixtureRepositorySource({
+      fixtures: repositoryFixtures,
+    });
+
+    const file = await source.readFile(minimalNodeLibrary, "src/add.ts");
+
+    expect(file).toEqual({
+      path: "src/add.ts",
+      text: "export function add(left: number, right: number): number {\n  return left + right;\n}\n",
+      sizeBytes: 84,
+      provenance: {
+        repository: minimalNodeLibrary,
+        sourceKind: "local-fixture",
+        sourceId: "minimal-node-library",
+        path: "src/add.ts",
+      },
     });
   });
 
@@ -50,6 +84,19 @@ describe("LocalFixtureRepositorySource", () => {
       sourceKind: "local-fixture",
       sourceId: "minimal-node-library",
       path: "src/add.ts",
+    });
+  });
+
+  it("carries repository source failure context with the expanded file shape", async () => {
+    const source = new LocalFixtureRepositorySource({
+      fixtures: repositoryFixtures,
+    });
+
+    await expect(
+      source.readFile(minimalNodeLibrary, "src/missing.ts"),
+    ).rejects.toMatchObject({
+      code: "file-not-found",
+      repository: minimalNodeLibrary,
     });
   });
 
