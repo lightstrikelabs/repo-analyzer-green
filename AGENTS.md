@@ -66,6 +66,7 @@ If a task conflicts with those documents, call out the conflict before editing. 
 ## Project-Specific Direction
 
 - This project is domain-first. Keep domain logic independent of framework, filesystem, network, GitHub, and model-provider details.
+- Keep frontend route/page files as thin screens. Put reusable UI and non-trivial presentation behavior in modular components, and test those components when behavior, state, or conditional rendering matters.
 - Use fake adapters for tests before wiring real infrastructure.
 - Preserve provenance, confidence, caveats, and missing evidence in report behavior.
 - Do not treat raw test LOC, raw coverage, or single static scores as direct proof of repository quality.

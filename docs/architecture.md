@@ -22,6 +22,45 @@ The application should preserve provenance, caveats, missing evidence, and confi
 
 Next.js is a good fit because the app needs a browser UI, API boundaries, server-side repository analysis, and future auth/database integration. The domain must remain independent of Next.js.
 
+### Frontend Architecture
+
+Keep route and page files thin. Next.js route files should compose data loading, application-service calls, and reusable components; they should not own business policy or accumulate detailed UI behavior.
+
+Recommended structure:
+
+```text
+src/
+  app/
+    page.tsx
+    reports/
+      [reportId]/
+        page.tsx
+  components/
+    report/
+      report-summary.tsx
+      report-finding-list.tsx
+    chat/
+      follow-up-thread.tsx
+      follow-up-composer.tsx
+    shared/
+      confidence-badge.tsx
+      evidence-link.tsx
+```
+
+Rules:
+- Screens/routes are composition boundaries, not business-policy modules.
+- Reusable UI belongs in named components under `src/components/` once it is shared, stateful, conditional, or large enough to hide route intent.
+- Component names should describe product concepts, not visual implementation details.
+- Components may format and present domain/application data, but scoring policy, evidence interpretation, reviewer rules, and authorization decisions stay outside the component tree.
+- Keep component props explicit and typed. Parse external/runtime data before it reaches UI components.
+- Do not create `index.ts` component barrels. Import concrete component modules directly.
+
+Testing:
+- Component tests are required for non-trivial state, conditional rendering, accessibility-critical controls, error/empty/loading states, and user interactions.
+- Pure static presentational components can be covered through parent workflow tests until they gain behavior.
+- Keep narrow component tests colocated with the component using `*.test.tsx`.
+- Keep browser workflow tests in `e2e/`.
+
 ## Scaffolding Strategy
 
 Scaffold in two passes: first the framework/tooling skeleton, then the first vertical domain slice. Do not start by cloning the red UI or wiring real GitHub/model infrastructure.
