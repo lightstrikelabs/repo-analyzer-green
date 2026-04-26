@@ -1168,6 +1168,8 @@ Acceptance criteria:
 - Explains confidence, caveats, and missing evidence
 - Gives examples of appropriate follow-up questions
 
+Reference: [metric-interpretation.md](metric-interpretation.md)
+
 #### Add Operational Hardening
 
 Labels: `type:api`, `type:reviewer`, `priority:medium`
