@@ -391,6 +391,221 @@ Move framework, filesystem, network, and model-provider details behind ports onl
 
 This section defines the tracker structure to create later. Do not create GitHub issues, labels, milestones, or projects until this plan is reviewed.
 
+## Parallel Execution Plan
+
+Use subagents deliberately. Parallel work should increase throughput without fragmenting architecture, duplicating changes, or creating merge conflicts.
+
+### Default Concurrency
+
+Recommended steady-state concurrency:
+- 1 lead agent coordinating scope, integration, and final review
+- Up to 2 implementation workers at the same time
+- Up to 1 explorer for read-only research or codebase questions
+- Up to 1 verifier only when verification can run independently of active implementation
+
+Practical maximum: 4 active subagents plus the lead. Use that only when write scopes are clearly disjoint.
+
+Avoid running many implementation workers before the scaffold, package manager, test harness, and architecture boundaries exist. Early concurrency should bias toward docs, contracts, and read-only exploration.
+
+### Work That Should Stay Serial
+
+These issues define shared structure and should generally be led by one agent at a time:
+- #4 Scaffold Framework And Tooling Skeleton
+- #5 Establish Tooling And CI Quality Gate
+- #15 Define Runtime Schema Strategy
+- #16 Implement First Vertical Domain Slice
+- #17 Model Report Card Inputs And Outputs
+- #25 Define Reviewer Assessment Schema
+- #29 Build Analyze Repository Application Service
+
+Reason: these issues create shared files, contracts, folder layout, package scripts, and domain primitives. Parallel edits here are likely to conflict or create inconsistent patterns.
+
+### Good Parallel Workstreams
+
+#### Baseline Documentation And Governance
+
+Can run in parallel after #1 and #2 are clear:
+- #9 Add PR And Issue Templates
+- #10 Document Definition Of Done And Review Checklist
+- #11 Add Architecture Boundary Enforcement Plan
+- #12 Add Exception Register Policy
+- #13 Define Foundational E2E Contract
+- #14 Add Dependency Policy
+- #18 Define Actor And Ownership Boundaries
+
+Suggested concurrency: 2-3 agents. Keep each agent on separate docs/templates.
+
+#### Tooling Guardrails
+
+Can run in limited parallel after #4 scaffold exists:
+- #6 Implement Unsafe Type Escape Guard
+- #7 Implement Commit Message Enforcement
+- #8 Add Agent Documentation Readiness Check
+
+Suggested concurrency: 2 agents. Avoid overlapping hook/CI files unless ownership is explicit.
+
+#### Evidence Engine
+
+Can run in parallel after #20 repository source port and fixture adapter exist:
+- #21 Implement File Inventory With Omission Tracking
+- #22 Detect Project Archetype Signals
+- #23 Parse Manifests And Workflow Signals
+- #24 Define Evidence Persistence Shape
+
+Suggested concurrency: 2 workers plus 1 explorer. Assign disjoint modules under `src/domain/evidence`, `src/infrastructure/filesystem`, and docs/schema files.
+
+#### Reviewer Assessment
+
+Can run in parallel after #25 schema exists:
+- #26 Build Fake Reviewer Adapter
+- #27 Draft LLM Reviewer Prompt Contract
+- #28 Implement LLM Reviewer Adapter
+
+Suggested concurrency: 2 workers. Keep #28 behind #25 and #27, and do not let provider SDK details leak into domain code.
+
+#### Report Card UI/API
+
+Can run in parallel after #29 application service exists:
+- #30 Add Analyze API Route
+- #31 Build Initial Report UI
+
+Suggested concurrency: 2 workers. API and UI write scopes should stay separate.
+
+#### Follow-Up Chat
+
+Can run in parallel after #32 conversation/message domain types exist:
+- #33 Build Suggested Follow-Up Question Generator
+- #34 Build Conversation Target Resolver
+- #35 Build Evidence Retrieval For Follow-Up
+- #37 Build Chat Answer Contract
+
+Then, after those are stable:
+- #36 Build Follow-Up Chat Application Service
+- #38 Build Follow-Up UI
+- #39 Add Conversation Persistence Adapter
+
+Suggested concurrency: 2-3 workers. Keep domain, application, UI, and persistence adapters explicitly separated.
+
+#### Calibration And Hardening
+
+Can run in parallel near the end:
+- #40 Add Multi-Archetype Fixture Suite
+- #41 Document Metric Interpretation Guidance
+- #42 Add Operational Hardening
+- #43 Document Auth And Database Integration Plan
+
+Suggested concurrency: 2-3 agents. Calibration fixtures and docs can proceed while operational hardening is implemented.
+
+### Recommended Execution Waves
+
+#### Wave 1: Baseline And Scaffolding
+
+Concurrency: 1-2 agents.
+
+Lead:
+- #1 Write ADR: Evidence-Backed Report Cards
+- #2 Define Ubiquitous Language
+
+Worker:
+- #9 Add PR And Issue Templates
+- #10 Document Definition Of Done And Review Checklist
+
+Then run #4 and #5 mostly serially because they establish the working tree and CI shape.
+
+#### Wave 2: Guardrails And First Slice
+
+Concurrency: 2-3 agents.
+
+Lead:
+- #16 Implement First Vertical Domain Slice
+
+Workers:
+- #6 Implement Unsafe Type Escape Guard
+- #7 Implement Commit Message Enforcement
+- #13 Define Foundational E2E Contract
+
+Keep #16 under lead ownership because it defines the first implementation pattern.
+
+#### Wave 3: Evidence And Reviewer Foundations
+
+Concurrency: 3-4 agents.
+
+Lead:
+- #20 Implement Repository Source Port And Local Fixture Adapter
+
+Workers:
+- #21 Implement File Inventory With Omission Tracking
+- #25 Define Reviewer Assessment Schema
+- #26 Build Fake Reviewer Adapter
+
+Explorer:
+- Research project archetype and manifest parsing cases for #22 and #23.
+
+#### Wave 4: Report Vertical Slice
+
+Concurrency: 2-3 agents.
+
+Lead:
+- #29 Build Analyze Repository Application Service
+
+Workers:
+- #30 Add Analyze API Route
+- #31 Build Initial Report UI
+
+Verifier:
+- Run the foundational E2E and CI checks once the slice is integrated.
+
+#### Wave 5: Follow-Up Chat
+
+Concurrency: 3-4 agents.
+
+Lead:
+- #32 Model Conversation And Chat Message Domain Types
+- #36 Build Follow-Up Chat Application Service
+
+Workers:
+- #33 Build Suggested Follow-Up Question Generator
+- #35 Build Evidence Retrieval For Follow-Up
+- #37 Build Chat Answer Contract
+- #38 Build Follow-Up UI
+
+Use explicit write ownership because chat touches domain, application services, API, and UI.
+
+#### Wave 6: Calibration And Release Hardening
+
+Concurrency: 3-4 agents.
+
+Workers:
+- #40 Add Multi-Archetype Fixture Suite
+- #41 Document Metric Interpretation Guidance
+- #42 Add Operational Hardening
+- #43 Document Auth And Database Integration Plan
+
+Lead focuses on integration, release readiness, and closing residual architecture gaps.
+
+### Subagent Assignment Rules
+
+Every subagent task should include:
+- Issue number and acceptance criteria
+- Owned files or modules
+- Explicit non-goals
+- Expected tests or docs
+- Instruction not to revert unrelated edits
+- Instruction to report changed files
+
+Do not assign two workers to the same write scope. If two issues share files, serialize them or make one worker read-only.
+
+### Integration Rules
+
+The lead agent is responsible for:
+- Keeping the PR scope coherent
+- Reviewing subagent output before merge
+- Running local checks
+- Resolving architectural inconsistencies
+- Ensuring docs reflect any changed decisions
+
+Subagents can accelerate implementation, but the lead owns final correctness.
+
 ### Milestones
 
 #### 1. Domain And Architecture Baseline
