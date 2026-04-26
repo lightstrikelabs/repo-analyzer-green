@@ -47,7 +47,7 @@ The body should explain:
 - The GitHub issue number as `Issue: #<number>`
 - The GitHub pull request number as `PR: #<number>` once the PR exists
 
-Do not repeat the subject in the body. If the PR number is not known before the first push, amend the commit body after opening the PR and force-push with lease.
+Do not repeat the subject in the body. Do not amend commits during normal PR work. If the PR number is not known before the first push, add a follow-up commit that records the PR reference or include the PR reference in the squash-merge body.
 
 ## Examples
 
