@@ -14,7 +14,10 @@ import userEvent from "@testing-library/user-event";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { OpenRouterDefaultModelId } from "../../infrastructure/llm/openrouter-config";
+import {
+  OpenRouterDefaultModelId,
+  OpenRouterFreeModelId,
+} from "../../infrastructure/llm/openrouter-config";
 import { BrowserLocalSessionStorageKey } from "../../infrastructure/persistence/browser-local-session-storage";
 import { analyzeRepositoryResponseFixture } from "../../../test/support/analyze-repository-response-fixture";
 
@@ -83,7 +86,17 @@ describe("AnalyzeRepositoryPanel", () => {
     expect(rawSession).not.toContain("sk-test");
   });
 
-  it("resets the advanced model field to the free router default", async () => {
+  it("defaults the advanced model field to GPT-5 Mini", async () => {
+    const user = userEvent.setup();
+
+    render(<AnalyzeRepositoryPanel />);
+
+    await user.click(screen.getByText("Advanced"));
+
+    expect(modelInputValue()).toBe(OpenRouterDefaultModelId);
+  });
+
+  it("offers GPT-5 Mini and free router model presets", async () => {
     const user = userEvent.setup();
 
     render(<AnalyzeRepositoryPanel />);
@@ -92,6 +105,10 @@ describe("AnalyzeRepositoryPanel", () => {
     await user.clear(screen.getByLabelText("OpenRouter Model"));
     await user.type(screen.getByLabelText("OpenRouter Model"), "custom/model");
     await user.click(screen.getByRole("button", { name: "Use Free Router" }));
+
+    expect(modelInputValue()).toBe(OpenRouterFreeModelId);
+
+    await user.click(screen.getByRole("button", { name: "Use GPT-5 Mini" }));
 
     expect(modelInputValue()).toBe(OpenRouterDefaultModelId);
   });

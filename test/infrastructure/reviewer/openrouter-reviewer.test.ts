@@ -496,8 +496,7 @@ describe("OpenRouterReviewer", () => {
       validationIssues: [
         {
           path: [],
-          message:
-            "OpenRouter reviewer output is unavailable because OpenRouter returned status 429 for openrouter/free. The selected model or account may be rate limited; retry later or choose another structured-output-capable model.",
+          message: `OpenRouter reviewer output is unavailable because OpenRouter returned status 429 for ${OpenRouterDefaultModelId}. The selected model or account may be rate limited; retry later or choose another structured-output-capable model.`,
         },
       ],
     });

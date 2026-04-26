@@ -59,7 +59,8 @@ The test should pass the key only through environment variables or request-scope
 OpenRouter configuration is parsed at the provider boundary in `src/infrastructure/llm/openrouter-config.ts`.
 
 - `OPENROUTER_API_KEY` is request-scoped configuration. This slice does not store it.
-- Empty or missing model input defaults to `openrouter/free`.
+- Empty or missing model input defaults to `openai/gpt-5-mini`.
+- `openrouter/free` remains available as an explicit best-effort option, but it should not be treated as the reliability default.
 - Empty API key input is normalized to an unavailable provider configuration.
 - Provider request metadata stays in infrastructure and currently supports `reviewer-assessment` and `follow-up-answer` usage contexts.
 
@@ -73,14 +74,14 @@ The normal test suite must not depend on live model calls. To verify the OpenRou
 OPENROUTER_API_KEY="<local key>" RUN_OPENROUTER_LIVE=1 pnpm vitest run test/infrastructure/llm/openrouter-live-contract.test.ts
 ```
 
-This test uses `openai/gpt-4.1-mini`, requests JSON object output, and asserts that OpenRouter returns parseable JSON content. Do not commit keys, paste keys into issue bodies, or include raw provider responses in logs.
+This test uses the configured default `openai/gpt-5-mini` and the explicit `openrouter/free` option, requests JSON object output, and asserts that OpenRouter returns parseable JSON content. Do not commit keys, paste keys into issue bodies, or include raw provider responses in logs.
 
 ## Safety Rules
 
 - Keep the deterministic foundational E2E fake-backed.
 - Put live OpenRouter E2E in its own clearly named job.
 - Avoid running live-provider E2E on untrusted fork pull requests unless secrets are unavailable or the job is explicitly guarded.
-- Use a low-cost/free model default where possible.
+- Use a low-cost, structured-output-capable default where possible.
 - Fail with a clear missing-secret message if a live-provider job is manually requested without `OPENROUTER_API_KEY`.
 - Redact provider errors before showing them in user-facing UI or persisted artifacts.
 

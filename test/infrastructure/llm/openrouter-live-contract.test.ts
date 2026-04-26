@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import {
+  OpenRouterDefaultModelId,
+  OpenRouterFreeModelId,
+} from "../../../src/infrastructure/llm/openrouter-config";
 import { OpenRouterChatCompletionProvider } from "../../../src/infrastructure/llm/openrouter-chat-provider";
 
 const shouldRunLiveOpenRouter =
@@ -12,7 +16,7 @@ const describeLiveOpenRouter = shouldRunLiveOpenRouter
   : describe.skip;
 
 describeLiveOpenRouter("OpenRouter live contract", () => {
-  it.each(["openai/gpt-4.1-mini", "openrouter/free"])(
+  it.each([OpenRouterDefaultModelId, OpenRouterFreeModelId])(
     "returns JSON object content from %s",
     async (model) => {
       const provider = new OpenRouterChatCompletionProvider();

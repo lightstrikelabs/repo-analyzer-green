@@ -11,6 +11,11 @@ import {
   ReviewerAssessmentSchemaVersion,
   type ReviewerAssessment,
 } from "../../../src/domain/reviewer/reviewer-assessment";
+import {
+  OpenRouterDefaultModelId,
+  OpenRouterFallbackModelId,
+  OpenRouterFreeModelId,
+} from "../../../src/infrastructure/llm/openrouter-config";
 import { OpenRouterReviewerFallback } from "../../../src/infrastructure/reviewer/openrouter-reviewer-fallback";
 
 const evidenceReference = {
@@ -86,7 +91,7 @@ const openRouterMetadata: ReviewerMetadata = {
   name: "OpenRouter reviewer",
   reviewerVersion: "openrouter-reviewer.v1",
   modelProvider: "openrouter",
-  modelName: "openrouter/free",
+  modelName: OpenRouterFreeModelId,
   reviewedAt: "2026-04-26T12:01:00-07:00",
 };
 
@@ -139,10 +144,39 @@ describe("OpenRouterReviewerFallback", () => {
     expect(result.assessment.caveats).toContainEqual(
       expect.objectContaining({
         id: "caveat:openrouter-reviewer-fallback",
-        summary: expect.stringContaining("openai/gpt-4.1-mini"),
+        summary: expect.stringContaining(OpenRouterDefaultModelId),
         missingEvidence: expect.arrayContaining([
           "Successful reviewer response from the selected OpenRouter model",
         ]),
+      }),
+    );
+  });
+
+  it("suggests the fallback model when the default model cannot complete", async () => {
+    const primary = new StubReviewer(
+      malformedOpenRouterResult({
+        rawResponse: "",
+        message:
+          "OpenRouter reviewer output is unavailable because the provider request could not be completed.",
+        modelName: OpenRouterDefaultModelId,
+      }),
+    );
+    const fallback = new StubReviewer({
+      kind: "assessment",
+      assessment: fallbackAssessment,
+    });
+    const reviewer = new OpenRouterReviewerFallback({ primary, fallback });
+
+    const result = await reviewer.assess(request);
+
+    expect(result.kind).toBe("assessment");
+    if (result.kind !== "assessment") {
+      throw new Error("Expected fallback reviewer assessment");
+    }
+    expect(result.assessment.caveats).toContainEqual(
+      expect.objectContaining({
+        id: "caveat:openrouter-reviewer-fallback",
+        summary: expect.stringContaining(OpenRouterFallbackModelId),
       }),
     );
   });
@@ -192,10 +226,17 @@ class StubReviewer implements Reviewer {
 function malformedOpenRouterResult(options: {
   readonly rawResponse: string;
   readonly message: string;
+  readonly modelName?: string;
 }): MalformedReviewerResponse {
   return {
     kind: "malformed-response",
-    reviewer: openRouterMetadata,
+    reviewer:
+      options.modelName === undefined
+        ? openRouterMetadata
+        : {
+            ...openRouterMetadata,
+            modelName: options.modelName,
+          },
     rawResponse: options.rawResponse,
     validationIssues: [
       {
