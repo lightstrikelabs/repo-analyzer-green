@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { RepositorySourceError } from "../../../src/domain/repository";
-import type { RepositoryReference } from "../../../src/domain/repository";
+import {
+  RepositorySourceError,
+  type RepositoryReference,
+} from "../../../src/domain/repository/repository-source";
 
 describe("RepositorySource domain types", () => {
   it("carries repository source failure context", () => {

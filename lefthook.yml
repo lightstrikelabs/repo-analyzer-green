@@ -2,6 +2,8 @@ pre-commit:
   commands:
     type-escape-check:
       run: pnpm run type-escape:check
+    barrel-files-check:
+      run: pnpm run barrel-files:check
 
 commit-msg:
   commands:

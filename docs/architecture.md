@@ -192,6 +192,37 @@ Type assertions should be rare. Prefer:
 
 Do not use `as any`. Avoid `as unknown`. If a double assertion is genuinely unavoidable, it should be isolated behind a boundary adapter with a comment explaining the upstream type gap and the validation that makes it safe.
 
+### Module Imports
+
+Use direct imports from concrete modules. Do not add `index.ts` files.
+
+Examples:
+
+```ts
+// Good
+import { LocalFixtureRepositorySource } from "@/infrastructure/filesystem/local-fixture-repository-source";
+
+// Avoid
+import { LocalFixtureRepositorySource } from "@/infrastructure/filesystem";
+```
+
+Allowed exceptions:
+- None for TypeScript source in this application.
+- Future package-public entrypoints would require an ADR and explicit package API ownership before adding any `index.ts`.
+
+Rationale:
+- Vercel's Next.js package-import optimization writeup documents that barrel files carry hidden import costs: importing one export can still require loading many unneeded modules, affecting local development, build time, and serverless cold starts.
+- Vercel Conformance describes barrel files as convenient but notes that exporting many items from one file can make tools analyze unused files.
+- Webpack's tree-shaking guide explains that side-effect handling and unused export pruning depend on bundler analysis and package metadata; direct imports keep the graph explicit.
+- Nx's circular-dependency guidance highlights that dependency cycles harm design and tooling effectiveness. `index.ts` files hide dependency edges and make those cycles easier to introduce accidentally.
+
+References:
+- [How we optimized package imports in Next.js](https://vercel.com/blog/how-we-optimized-package-imports-in-next-js)
+- [Next.js `optimizePackageImports`](https://nextjs.org/docs/pages/api-reference/config/next-config-js/optimizePackageImports)
+- [Vercel Conformance: `NEXTJS_MISSING_OPTIMIZE_PACKAGE_IMPORTS`](https://vercel.com/docs/conformance/rules/NEXTJS_MISSING_OPTIMIZE_PACKAGE_IMPORTS)
+- [Webpack: Tree Shaking](https://webpack.js.org/guides/tree-shaking/)
+- [Nx: Resolve Circular Dependencies](https://nx.dev/docs/troubleshooting/resolve-circular-dependencies)
+
 ### Testing
 
 Use Vitest for domain and application tests.

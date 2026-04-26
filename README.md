@@ -44,6 +44,7 @@ Quality gates:
 
 ```bash
 pnpm type-escape:check
+pnpm barrel-files:check
 pnpm lint
 pnpm format:check
 pnpm typecheck

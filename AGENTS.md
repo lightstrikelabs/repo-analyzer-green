@@ -30,6 +30,7 @@ If a task conflicts with those documents, call out the conflict before editing. 
 - Avoid `as any` like the plague.
 - Avoid `as unknown` whenever possible. Most cases should be handled with Zod parsing, type guards, discriminated unions, or better generic boundaries.
 - Any unavoidable type assertion must be narrow, local, and justified by nearby validation or platform constraints.
+- Do not add `index.ts` files. Use explicitly named modules and import from the concrete module path.
 
 ## 3. Protect The Core Workflow With One Foundational E2E Test
 

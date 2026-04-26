@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type { RepositoryReference } from "../../../src/domain/repository";
-import { RepositorySourceError } from "../../../src/domain/repository";
-import { LocalFixtureRepositorySource } from "../../../src/infrastructure/filesystem";
+import {
+  RepositorySourceError,
+  type RepositoryReference,
+} from "../../../src/domain/repository/repository-source";
+import { LocalFixtureRepositorySource } from "../../../src/infrastructure/filesystem/local-fixture-repository-source";
 
 import { repositoryFixtures } from "../../support/fixtures";
 
