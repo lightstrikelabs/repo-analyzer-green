@@ -7,8 +7,8 @@ These rules apply to all agentic development work in this repository.
 Before editing any non-test file, post each of these as a chat-visible artifact. The artifact itself is the proof; reviewers and future agents should be able to skim a session transcript and see all five.
 
 1. **Linked issue.** The GitHub issue URL for this slice. If none exists, run `/distill-issue` (or open one manually) before continuing.
-2. **Branch.** A `git status` excerpt confirming you are on a feature branch, not on `main`.
-3. **Preflight.** Output of `/preflight` covering `gh` auth, git remote, branch protection awareness, Vercel project link, lefthook install, Node/pnpm version match against `package.json` engines, and `.claude/settings.json` hook activation. Until that skill ships, follow the manual fork-day checklist in `docs/setup.md`.
+2. **Branch.** A `git status` excerpt confirming you are on a feature branch, not on `main`. Use `/start-slice --issue <n> --slug <kebab>` to refresh main, branch into a worktree, install, and run preflight in one step.
+3. **Preflight.** Output of `/preflight` covering `gh` auth, git remote, branch protection awareness, Vercel project link, lefthook install, Node/pnpm version match against `package.json` engines, and `.claude/settings.json` hook activation. `/start-slice` runs this for you at the end of bootstrap; otherwise invoke it directly with `node .agents/skills/preflight/scripts/preflight.ts`.
 4. **Failing test (RED).** `pnpm vitest run <file>` output that names the new test and shows it in the FAIL block — produced before any non-test source edit. The PreToolUse and lefthook commit gates enforce this mechanically; the chat artifact lets reviewers verify the _behavior_, not just the file pairing.
 5. **Architecture and plan check.** One line confirming `docs/architecture.md` and `docs/development-plan.md` were skimmed for conflicts with this slice. If there is a conflict, call it out before editing and update the affected doc in the same PR.
 
