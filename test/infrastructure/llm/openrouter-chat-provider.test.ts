@@ -83,6 +83,10 @@ describe("OpenRouterChatCompletionProvider", () => {
       controls: {
         maxOutputTokens: 1_500,
         responseFormat: "json_object",
+        reasoning: {
+          effort: "minimal",
+          exclude: true,
+        },
         temperature: 0,
       },
     });
@@ -92,6 +96,10 @@ describe("OpenRouterChatCompletionProvider", () => {
       messages: [{ role: "user", content: "Review this evidence." }],
       metadata: { usageContext: "reviewer-assessment" },
       max_tokens: 1_500,
+      reasoning: {
+        effort: "minimal",
+        exclude: true,
+      },
       response_format: { type: "json_object" },
       temperature: 0,
     });
@@ -209,8 +217,7 @@ describe("OpenRouterChatCompletionProvider", () => {
       provider: "openrouter",
       model: OpenRouterDefaultModelId,
       code: "empty-response",
-      userFacingCaveat:
-        "OpenRouter reviewer output is unavailable because the provider returned no usable message content.",
+      userFacingCaveat: `OpenRouter reviewer output is unavailable because OpenRouter returned no usable message content for ${OpenRouterDefaultModelId}. The selected model may have spent its output budget on reasoning tokens; retry or choose another structured-output-capable model.`,
     });
   });
 

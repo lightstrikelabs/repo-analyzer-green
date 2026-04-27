@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ChatAnswerSchemaVersion,
@@ -17,6 +17,7 @@ import {
   FollowUpAnswerValidationError,
   FollowUpProviderError,
   handleFollowUpRequest,
+  POST,
   type FollowUpRouteOptions,
 } from "./route";
 
@@ -102,6 +103,42 @@ const reportCard: ReportCard = {
 };
 
 describe("POST /api/follow-up", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("uses follow-up controls that leave room for reasoning-model answers", async () => {
+    const providerRequests: Request[] = [];
+    vi.stubGlobal("fetch", async (providerRequest: Request) => {
+      providerRequests.push(providerRequest);
+      return new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ answer: answeredContract().answer }),
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    });
+
+    const response = await POST(jsonRequest(validStartRequest()));
+
+    expect(response.status).toBe(200);
+    expect(providerRequests).toHaveLength(1);
+    expect(await providerRequests[0]?.json()).toMatchObject({
+      max_tokens: 4_000,
+      reasoning: {
+        effort: "minimal",
+        exclude: true,
+      },
+      response_format: { type: "json_object" },
+    });
+  });
+
   it("starts a live follow-up from a red-style report section target and preserves evidence snippets", async () => {
     const repository = new InMemoryConversationRepository();
     const reviewer = new RecordingChatReviewer(answeredContract());

@@ -14,8 +14,24 @@ export type OpenRouterChatMessage = {
   readonly content: string;
 };
 
+export type OpenRouterReasoningEffort =
+  | "xhigh"
+  | "high"
+  | "medium"
+  | "low"
+  | "minimal"
+  | "none";
+
+export type OpenRouterReasoningControls = {
+  readonly effort?: OpenRouterReasoningEffort;
+  readonly maxTokens?: number;
+  readonly exclude?: boolean;
+  readonly enabled?: boolean;
+};
+
 export type OpenRouterChatCompletionControls = {
   readonly maxOutputTokens?: number;
+  readonly reasoning?: OpenRouterReasoningControls;
   readonly responseFormat?: "json_object";
   readonly temperature?: number;
 };
@@ -79,6 +95,26 @@ const OpenRouterChatProviderResponseSchema = z
 const OpenRouterChatCompletionControlsSchema = z
   .object({
     maxOutputTokens: z.int().positive().optional(),
+    reasoning: z
+      .object({
+        effort: z
+          .enum(["xhigh", "high", "medium", "low", "minimal", "none"])
+          .optional(),
+        maxTokens: z.int().positive().optional(),
+        exclude: z.boolean().optional(),
+        enabled: z.boolean().optional(),
+      })
+      .strict()
+      .refine(
+        (reasoning) =>
+          reasoning.effort === undefined || reasoning.maxTokens === undefined,
+        {
+          message:
+            "OpenRouter reasoning controls cannot include both effort and maxTokens.",
+          path: ["maxTokens"],
+        },
+      )
+      .optional(),
     responseFormat: z.literal("json_object").optional(),
     temperature: z.number().min(0).max(2).optional(),
   })
@@ -176,8 +212,6 @@ export class OpenRouterChatCompletionProvider {
       return providerFailure({
         model: request.config.model,
         code: "empty-response",
-        userFacingCaveat:
-          "OpenRouter reviewer output is unavailable because the provider returned no usable message content.",
       });
     }
 
@@ -203,17 +237,33 @@ function requestBodyControls(
   controls: OpenRouterChatCompletionControls | undefined,
 ): {
   readonly max_tokens?: number;
+  readonly reasoning?: {
+    readonly effort?: OpenRouterReasoningEffort;
+    readonly max_tokens?: number;
+    readonly exclude?: boolean;
+    readonly enabled?: boolean;
+  };
   readonly response_format?: { readonly type: "json_object" };
   readonly temperature?: number;
 } {
   const requestControls: {
     max_tokens?: number;
+    reasoning?: {
+      effort?: OpenRouterReasoningEffort;
+      max_tokens?: number;
+      exclude?: boolean;
+      enabled?: boolean;
+    };
     response_format?: { readonly type: "json_object" };
     temperature?: number;
   } = {};
 
   if (controls?.maxOutputTokens !== undefined) {
     requestControls.max_tokens = controls.maxOutputTokens;
+  }
+
+  if (controls?.reasoning !== undefined) {
+    requestControls.reasoning = requestBodyReasoning(controls.reasoning);
   }
 
   if (controls?.responseFormat !== undefined) {
@@ -236,12 +286,46 @@ function parseOpenRouterChatCompletionControls(
     ...(parsedControls.maxOutputTokens === undefined
       ? {}
       : { maxOutputTokens: parsedControls.maxOutputTokens }),
+    ...(parsedControls.reasoning === undefined
+      ? {}
+      : { reasoning: parsedReasoningControls(parsedControls.reasoning) }),
     ...(parsedControls.responseFormat === undefined
       ? {}
       : { responseFormat: parsedControls.responseFormat }),
     ...(parsedControls.temperature === undefined
       ? {}
       : { temperature: parsedControls.temperature }),
+  };
+}
+
+function parsedReasoningControls(
+  reasoning: NonNullable<
+    z.infer<typeof OpenRouterChatCompletionControlsSchema>["reasoning"]
+  >,
+): OpenRouterReasoningControls {
+  return {
+    ...(reasoning.effort === undefined ? {} : { effort: reasoning.effort }),
+    ...(reasoning.maxTokens === undefined
+      ? {}
+      : { maxTokens: reasoning.maxTokens }),
+    ...(reasoning.exclude === undefined ? {} : { exclude: reasoning.exclude }),
+    ...(reasoning.enabled === undefined ? {} : { enabled: reasoning.enabled }),
+  };
+}
+
+function requestBodyReasoning(reasoning: OpenRouterReasoningControls): {
+  readonly effort?: OpenRouterReasoningEffort;
+  readonly max_tokens?: number;
+  readonly exclude?: boolean;
+  readonly enabled?: boolean;
+} {
+  return {
+    ...(reasoning.effort === undefined ? {} : { effort: reasoning.effort }),
+    ...(reasoning.maxTokens === undefined
+      ? {}
+      : { max_tokens: reasoning.maxTokens }),
+    ...(reasoning.exclude === undefined ? {} : { exclude: reasoning.exclude }),
+    ...(reasoning.enabled === undefined ? {} : { enabled: reasoning.enabled }),
   };
 }
 
@@ -312,7 +396,7 @@ function userFacingProviderFailureCaveat(options: {
     case "invalid-response":
       return `OpenRouter reviewer output is unavailable because OpenRouter returned an unexpected response shape for ${options.model}. Retry the request or choose another structured-output-capable model.`;
     case "empty-response":
-      return `OpenRouter reviewer output is unavailable because OpenRouter returned no usable message content for ${options.model}. Retry the request or choose another structured-output-capable model.`;
+      return `OpenRouter reviewer output is unavailable because OpenRouter returned no usable message content for ${options.model}. The selected model may have spent its output budget on reasoning tokens; retry or choose another structured-output-capable model.`;
     case "missing-api-key":
       return "OpenRouter reviewer output is unavailable because OPENROUTER_API_KEY is not configured for this request.";
   }
