@@ -162,7 +162,7 @@ describe("ReportCardView", () => {
     expect(html).toContain("Score");
     expect(html).toContain("Signals");
     expect(html).toContain("Next Checks");
-    expect(html).toContain("Test depth");
+    expect(html).toContain("The exported add function has a focused test.");
     expect(html).toContain("Limited fixture evidence");
     expect(html).toContain("Release workflow history");
     expect(html).toContain("Ask About Testing");
@@ -193,12 +193,11 @@ describe("ReportCardView", () => {
     vi.unstubAllGlobals();
   });
 
-  it("excludes the follow-up chat from the printed output", () => {
+  it("does not render the old embedded follow-up panel in the report flow", () => {
     const html = renderToStaticMarkup(<ReportCardView analysis={analysis} />);
 
-    expect(html).toMatch(
-      /<section[^>]*aria-labelledby="follow-up-panel-title"[^>]*class="[^"]*print:hidden[^"]*"/,
-    );
+    expect(html).not.toContain("follow-up-panel-title");
+    expect(html).not.toContain("Chat with evidence");
   });
 
   it("renders explicit empty states when language mix and caveats are absent", () => {

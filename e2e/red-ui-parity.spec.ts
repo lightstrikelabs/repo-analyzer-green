@@ -86,11 +86,19 @@ test.describe("red UI/UX parity", () => {
   });
 
   test("matches the red section chat workflow", async ({ page }) => {
+    await page.route("**/api/follow-up", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(followUpResponse("What should we fix first?")),
+      });
+    });
     await page.goto("/");
     await expect(page.getByLabel("GitHub repository URL")).toBeVisible();
     await page
       .getByLabel("GitHub repository URL")
       .fill("https://github.com/lightstrikelabs/repo-analyzer-green");
+    await page.getByLabel("OpenRouter API key").fill("sk-or-v1-e2e");
     await page.getByRole("button", { name: "Analyze" }).click();
 
     const maintainability = page.locator("article").filter({
@@ -109,8 +117,95 @@ test.describe("red UI/UX parity", () => {
 
     await page.getByRole("button", { name: "Close chat" }).click();
 
-    await expect(page.getByText("Chats")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Chats" })).toBeVisible();
     await expect(page.getByText("Recent Threads")).toBeVisible();
     await expect(page.getByText("What should we fix first?")).toBeVisible();
   });
 });
+
+function followUpResponse(question: string) {
+  const timestamp = "2026-04-26T19:00:00.000Z";
+  return {
+    conversation: {
+      id: "conversation:maintainability",
+      schemaVersion: "conversation.v1",
+      reportCardId: "report:red-parity",
+      repository: {
+        provider: "github",
+        owner: "lightstrikelabs",
+        name: "repo-analyzer-green",
+      },
+      target: {
+        kind: "dimension",
+        dimension: "maintainability",
+      },
+      messages: [
+        {
+          id: "message:1",
+          role: "user",
+          content: question,
+          citations: [],
+          assumptions: [],
+          createdAt: timestamp,
+        },
+        {
+          id: "message:2",
+          role: "assistant",
+          content: "Review the highest-risk maintainability signal first.",
+          citations: [],
+          assumptions: [],
+          createdAt: timestamp,
+        },
+      ],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    },
+    answer: {
+      answer: {
+        schemaVersion: "chat-answer.v1",
+        status: "answered",
+        summary: "Review the highest-risk maintainability signal first.",
+        evidenceBackedClaims: [
+          {
+            claim: "Repository structure evidence supports the answer.",
+            citations: [
+              {
+                evidenceReference: packageEvidence(),
+                quote: "Repository structure evidence",
+              },
+            ],
+          },
+        ],
+        assumptions: [],
+        caveats: [],
+        suggestedNextQuestions: [],
+      },
+      metadata: {
+        provider: "fixture",
+        modelName: "fixture-chat",
+        generatedAt: timestamp,
+      },
+    },
+    evidence: {
+      snippets: [
+        {
+          evidenceReference: packageEvidence(),
+          text: "Repository structure evidence",
+          source: "fresh-content",
+          targetRelevance: "dimension",
+          rank: 100,
+        },
+      ],
+      missingContext: [],
+    },
+  };
+}
+
+function packageEvidence() {
+  return {
+    id: "evidence:package-json",
+    kind: "file",
+    label: "Package manifest",
+    path: "package.json",
+  };
+}
