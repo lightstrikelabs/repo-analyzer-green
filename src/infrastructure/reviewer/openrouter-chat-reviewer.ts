@@ -54,6 +54,9 @@ export type OpenRouterChatReviewerOptions = {
   readonly now?: () => Date;
 };
 
+const DefaultFollowUpMaxOutputTokens = 1_200;
+const DefaultFollowUpTemperature = 0.2;
+
 const ProviderChatAnswerResponseSchema = z
   .object({
     answer: ChatAnswerSchema,
@@ -73,7 +76,7 @@ export class OpenRouterChatReviewer implements ChatReviewer {
     this.chatProvider =
       options.chatProvider ?? new OpenRouterChatCompletionProvider();
     this.config = options.config;
-    this.controls = options.controls;
+    this.controls = chatControls(options.controls);
     this.now = options.now ?? (() => new Date());
   }
 
@@ -148,6 +151,17 @@ export class OpenRouterChatReviewer implements ChatReviewer {
 
     return parsedContract.data;
   }
+}
+
+function chatControls(
+  controls: OpenRouterChatCompletionControls | undefined,
+): OpenRouterChatCompletionControls {
+  return {
+    maxOutputTokens:
+      controls?.maxOutputTokens ?? DefaultFollowUpMaxOutputTokens,
+    responseFormat: controls?.responseFormat ?? "json_object",
+    temperature: controls?.temperature ?? DefaultFollowUpTemperature,
+  };
 }
 
 type JsonParseResult =
