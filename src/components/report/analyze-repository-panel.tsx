@@ -346,7 +346,11 @@ export function AnalyzeRepositoryPanel() {
 
       <main className="mx-auto min-w-0 max-w-7xl px-4 py-6 sm:px-6">
         {reportContent.kind === "loaded" ? (
-          <ReportCardView analysis={reportContent.analysis} />
+          <ReportCardView
+            analysis={reportContent.analysis}
+            apiKey={apiKey}
+            model={repositoryForm.selectedModel}
+          />
         ) : reportContent.kind === "loading" ? (
           <AnalysisLoadingState phase={reportContent.phase} />
         ) : (

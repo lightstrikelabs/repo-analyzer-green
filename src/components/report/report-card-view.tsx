@@ -1,25 +1,196 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { z } from "zod";
+
 import { buildReportDashboardViewModel } from "../../application/report-dashboard/report-dashboard-view-model";
 import type {
   ReportDashboardBigNumber,
   ReportDashboardLanguageSlice,
   ReportDashboardReviewerNote,
   ReportDashboardSection,
+  ReportDashboardSectionId,
 } from "../../application/report-dashboard/report-dashboard-view-model";
 import type { AnalyzeRepositoryResponse } from "../../application/analyze-repository/analyze-repository-response";
-import { FollowUpPanel } from "../chat/follow-up-panel";
+import { ChatAnswerContractSchema } from "../../domain/chat/chat-answer";
+import {
+  ConversationSchema,
+  type ConversationTarget,
+} from "../../domain/chat/conversation";
+import { EvidenceReferenceSchema } from "../../domain/shared/evidence-reference";
+import { OpenRouterDefaultModelId } from "../../infrastructure/llm/openrouter-config";
+import {
+  loadBrowserFollowUpState,
+  saveBrowserFollowUpState,
+  type BrowserFollowUpSession,
+  type BrowserFollowUpState,
+} from "../../infrastructure/persistence/browser-local-session-storage";
+import { FollowUpSlideout } from "../chat/follow-up-slideout";
 import { PrintReportButton } from "./print-report-button";
 import { ScoreRing } from "./score-ring";
 import { Sparkline } from "./sparkline";
 
 export function ReportCardView({
+  apiKey = "",
   analysis,
+  model = OpenRouterDefaultModelId,
 }: {
+  readonly apiKey?: string;
   readonly analysis: AnalyzeRepositoryResponse;
+  readonly model?: string;
 }) {
   const dashboard = buildReportDashboardViewModel(analysis);
   const strongestArea = dashboard.sections
     .filter((section) => section.score !== undefined)
     .toSorted((left, right) => (right.score ?? 0) - (left.score ?? 0))[0];
+  const reportCard = analysis.reportCard;
+  const [sessions, setSessions] = useState<BrowserFollowUpSession[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatDraft, setChatDraft] = useState("");
+  const [chatError, setChatError] = useState("");
+  const [loadingTarget, setLoadingTarget] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const activeSession = useMemo(
+    () =>
+      sessions.find(
+        (session) => session.conversation.id === activeConversationId,
+      ) ??
+      sessions[0] ??
+      null,
+    [activeConversationId, sessions],
+  );
+
+  useEffect(() => {
+    const stored = loadBrowserFollowUpState(window.localStorage, reportCard.id);
+    const nextState: BrowserFollowUpState = stored ?? {
+      sessions: [],
+      activeConversationId: null,
+    };
+    setSessions(nextState.sessions);
+    setActiveConversationId(
+      nextState.activeConversationId ??
+        nextState.sessions[0]?.conversation.id ??
+        null,
+    );
+    setHydrated(true);
+  }, [reportCard.id]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    saveBrowserFollowUpState(window.localStorage, reportCard.id, {
+      sessions,
+      activeConversationId,
+    });
+  }, [activeConversationId, hydrated, reportCard.id, sessions]);
+
+  async function startSectionConversation(
+    section: ReportDashboardSection,
+    question: string,
+  ) {
+    const trimmedQuestion =
+      question.trim() === ""
+        ? `What should we inspect first for ${section.title}?`
+        : question.trim();
+
+    await sendFollowUpRequest({
+      loadingKey: section.id,
+      question: trimmedQuestion,
+      requestBody: {
+        reportCard,
+        target: {
+          kind: "report-section",
+          sectionId: section.id,
+        },
+        question: trimmedQuestion,
+        apiKey,
+        model,
+      },
+    });
+  }
+
+  async function continueActiveConversation() {
+    const question = chatDraft.trim();
+    if (question === "" || activeSession === null) {
+      return;
+    }
+
+    await sendFollowUpRequest({
+      loadingKey: activeSession.conversation.id,
+      question,
+      requestBody: {
+        reportCard,
+        conversationId: activeSession.conversation.id,
+        messages: activeSession.conversation.messages.map((message) => ({
+          role: message.role,
+          content: message.content,
+        })),
+        question,
+        apiKey,
+        model,
+      },
+    });
+  }
+
+  async function sendFollowUpRequest(input: {
+    readonly loadingKey: string;
+    readonly question: string;
+    readonly requestBody: FollowUpRequestBody;
+  }) {
+    setChatOpen(true);
+    setChatError("");
+    setLoadingTarget(input.loadingKey);
+
+    try {
+      const trimmedApiKey = apiKey.trim();
+      if (trimmedApiKey === "") {
+        setChatError("OpenRouter API key is required for follow-up questions.");
+        return;
+      }
+
+      const response = await fetch("/api/follow-up", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          ...input.requestBody,
+          apiKey: trimmedApiKey,
+        }),
+      });
+      const body: unknown = await response.json();
+
+      if (!response.ok) {
+        setChatError(errorMessageFor(body));
+        return;
+      }
+
+      const parseResult = FollowUpApiResponseSchema.safeParse(body);
+      if (!parseResult.success) {
+        setChatError("Follow-up answer could not be loaded.");
+        return;
+      }
+
+      const nextSession = sessionFromApiResult(parseResult.data);
+      setSessions((current) => [
+        nextSession,
+        ...current.filter(
+          (session) => session.conversation.id !== nextSession.conversation.id,
+        ),
+      ]);
+      setActiveConversationId(nextSession.conversation.id);
+      setChatDraft("");
+    } catch {
+      setChatError("Follow-up answer failed unexpectedly.");
+    } finally {
+      setLoadingTarget(null);
+    }
+  }
 
   return (
     <section className="space-y-5" aria-labelledby="report-title">
@@ -107,7 +278,12 @@ export function ReportCardView({
           Report Sections
         </h3>
         {dashboard.sections.map((section) => (
-          <ReportSectionPanel key={section.id} section={section} />
+          <ReportSectionPanel
+            key={section.id}
+            loading={loadingTarget === section.id}
+            onAsk={(question) => startSectionConversation(section, question)}
+            section={section}
+          />
         ))}
       </section>
 
@@ -148,7 +324,19 @@ export function ReportCardView({
         </div>
       </details>
 
-      <FollowUpPanel analysis={analysis} />
+      <FollowUpSlideout
+        activeConversationId={activeSession?.conversation.id ?? null}
+        draft={chatDraft}
+        error={chatError}
+        isLoading={loadingTarget !== null}
+        isOpen={chatOpen}
+        onClose={() => setChatOpen(false)}
+        onContinue={continueActiveConversation}
+        onDraftChange={setChatDraft}
+        onOpen={() => setChatOpen(true)}
+        onSelectConversation={setActiveConversationId}
+        sessions={sessions}
+      />
     </section>
   );
 }
@@ -266,8 +454,12 @@ function ReviewerNotesPanel({
 }
 
 function ReportSectionPanel({
+  loading,
+  onAsk,
   section,
 }: {
+  readonly loading: boolean;
+  readonly onAsk: (question: string) => Promise<void>;
   readonly section: ReportDashboardSection;
 }) {
   const signals = [...section.highlights, ...section.risks, ...section.caveats];
@@ -320,13 +512,32 @@ function ReportSectionPanel({
           </div>
         </div>
 
-        <SectionAskBox sectionTitle={section.title} />
+        <SectionAskBox
+          loading={loading}
+          onAsk={onAsk}
+          sectionTitle={section.title}
+        />
       </div>
     </article>
   );
 }
 
-function SectionAskBox({ sectionTitle }: { readonly sectionTitle: string }) {
+function SectionAskBox({
+  loading,
+  onAsk,
+  sectionTitle,
+}: {
+  readonly loading: boolean;
+  readonly onAsk: (question: string) => Promise<void>;
+  readonly sectionTitle: string;
+}) {
+  const [draft, setDraft] = useState("");
+
+  async function handleOpenChat() {
+    await onAsk(draft);
+    setDraft("");
+  }
+
   return (
     <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
       <label className="block">
@@ -335,15 +546,20 @@ function SectionAskBox({ sectionTitle }: { readonly sectionTitle: string }) {
         </span>
         <textarea
           aria-label={`Ask About ${sectionTitle}`}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
           className="mt-2 h-24 w-full resize-none rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500"
           placeholder={`Ask about ${sectionTitle.toLowerCase()}...`}
+          disabled={loading}
         />
       </label>
       <button
         type="button"
+        onClick={handleOpenChat}
+        disabled={loading}
         className="mt-3 h-10 w-full rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
       >
-        Open Chat
+        {loading ? "Opening" : "Open Chat"}
       </button>
     </div>
   );
@@ -435,6 +651,135 @@ function DetailList({
       )}
     </section>
   );
+}
+
+type FollowUpRequestBody = {
+  readonly reportCard: AnalyzeRepositoryResponse["reportCard"];
+  readonly target?: {
+    readonly kind: "report-section";
+    readonly sectionId: ReportDashboardSectionId;
+  };
+  readonly conversationId?: string;
+  readonly messages?: readonly {
+    readonly role: "user" | "assistant";
+    readonly content: string;
+  }[];
+  readonly question: string;
+  readonly apiKey: string;
+  readonly model: string;
+};
+
+const FollowUpEvidenceSchema = z
+  .object({
+    snippets: z.array(
+      z
+        .object({
+          evidenceReference: EvidenceReferenceSchema,
+          text: z.string(),
+          source: z.enum(["fresh-content", "saved-metadata"]),
+          targetRelevance: z.enum([
+            "report",
+            "dimension",
+            "finding",
+            "caveat",
+            "evidence",
+          ]),
+          rank: z.number(),
+          lineStart: z.number().optional(),
+          lineEnd: z.number().optional(),
+        })
+        .strict(),
+    ),
+    missingContext: z.array(
+      z
+        .object({
+          evidenceReference: EvidenceReferenceSchema,
+          reason: z.string(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+
+const FollowUpApiResponseSchema = z
+  .object({
+    conversation: ConversationSchema,
+    answer: ChatAnswerContractSchema,
+    evidence: FollowUpEvidenceSchema,
+  })
+  .passthrough();
+
+const FollowUpApiErrorSchema = z
+  .object({
+    error: z
+      .object({
+        message: z.string(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+type FollowUpApiResponse = z.infer<typeof FollowUpApiResponseSchema>;
+type FollowUpEvidence = z.infer<typeof FollowUpEvidenceSchema>;
+
+function sessionFromApiResult(
+  result: FollowUpApiResponse,
+): BrowserFollowUpSession {
+  const target = result.conversation.target ?? { kind: "report" };
+
+  return {
+    conversation: result.conversation,
+    target,
+    answer: result.answer,
+    evidenceSummary: summarizeEvidence(result.evidence),
+    title: titleForConversation(result.conversation.messages, target),
+  };
+}
+
+function titleForConversation(
+  messages: FollowUpApiResponse["conversation"]["messages"],
+  target: ConversationTarget,
+): string {
+  const firstQuestion =
+    messages.find((message) => message.role === "user")?.content ??
+    "Follow-up question";
+
+  return `${targetLabel(target)}: ${firstQuestion}`;
+}
+
+function summarizeEvidence(evidence: FollowUpEvidence): string {
+  if (evidence.snippets.length === 0) {
+    return evidence.missingContext.length === 0
+      ? "No evidence snippets were retrieved."
+      : `Missing evidence for ${evidence.missingContext.map((item) => item.evidenceReference.label).join(", ")}.`;
+  }
+
+  const labels = evidence.snippets
+    .slice(0, 3)
+    .map((snippet) => snippet.evidenceReference.label);
+  return `Retrieved ${evidence.snippets.length} snippet${evidence.snippets.length === 1 ? "" : "s"} from ${labels.join(", ")}.`;
+}
+
+function targetLabel(target: ConversationTarget): string {
+  switch (target.kind) {
+    case "report":
+      return "Report";
+    case "dimension":
+      return target.dimension;
+    case "finding":
+      return target.findingId;
+    case "caveat":
+      return target.caveatId;
+    case "evidence":
+      return target.evidenceReference.label;
+  }
+}
+
+function errorMessageFor(body: unknown): string {
+  const parsedError = FollowUpApiErrorSchema.safeParse(body);
+  return parsedError.success
+    ? parsedError.data.error.message
+    : "Follow-up answer failed unexpectedly.";
 }
 
 function MetadataItem({
