@@ -215,6 +215,71 @@ describe("OpenRouterChatReviewer", () => {
     });
   });
 
+  it("normalizes insufficient-context answers with answered-only leftovers", async () => {
+    const reviewer = new OpenRouterChatReviewer({
+      chatProvider: {
+        complete: async () => ({
+          kind: "completed",
+          provider: "openrouter",
+          model: OpenRouterDefaultModelId,
+          content: JSON.stringify({
+            answer: {
+              schemaVersion: "chat-answer.v1",
+              status: "insufficient-context",
+              summary: "No flaky test evidence was available.",
+              evidenceBackedClaims: [
+                {
+                  claim: "The report does not include flaky test evidence.",
+                  citations: [
+                    {
+                      evidenceReference: packageEvidence,
+                    },
+                  ],
+                },
+              ],
+              assumptions: [],
+              caveats: [
+                {
+                  summary: "Historical CI failure data was not provided.",
+                  missingEvidence: ["CI test failure history"],
+                },
+              ],
+              suggestedNextQuestions: [],
+            },
+          }),
+        }),
+      },
+      config: {
+        provider: "openrouter",
+        apiKey: "sk-or-v1-test",
+        model: OpenRouterDefaultModelId,
+        baseUrl: OpenRouterDefaultBaseUrl,
+      },
+      now: () => new Date("2026-04-26T12:00:00-07:00"),
+    });
+
+    const answer = await reviewer.answer({
+      reportCard,
+      conversation: conversation(),
+      target: { kind: "report" },
+      question: "Which tests are flaky?",
+      evidence: evidenceResult(),
+    });
+
+    expect(answer.answer).toEqual({
+      schemaVersion: "chat-answer.v1",
+      status: "insufficient-context",
+      summary: "No flaky test evidence was available.",
+      missingContext: [
+        {
+          reason: "Historical CI failure data was not provided.",
+          requestedEvidence: "CI test failure history",
+        },
+      ],
+      suggestedNextQuestions: [],
+    });
+  });
+
   it("sends compact target report context instead of the full report card", async () => {
     const completionRequests: Parameters<
       OpenRouterChatCompletionProvider["complete"]
