@@ -113,7 +113,7 @@ function matchesPattern(filePath: string, pattern: string): boolean {
   return filePath === pattern;
 }
 
-const DEFAULT_ALLOWLIST: readonly string[] = [
+export const DEFAULT_ALLOWLIST: readonly string[] = [
   "docs/**",
   "**/*.md",
   "**/*.css",
@@ -123,6 +123,9 @@ const DEFAULT_ALLOWLIST: readonly string[] = [
   "e2e/**",
   ".github/**",
   ".claude/**",
+  ".codex/**",
+  ".pi/**",
+  ".agents/**",
   "AGENTS.md",
   "CLAUDE.md",
   "README.md",
