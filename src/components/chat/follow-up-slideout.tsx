@@ -1,5 +1,7 @@
 "use client";
 
+import { Loader2, MessageSquare, Send, X } from "lucide-react";
+
 import type { ChatAnswer } from "../../domain/chat/chat-answer";
 import type {
   ChatMessage,
@@ -54,51 +56,56 @@ export function FollowUpSlideout({
   }
 
   return (
-    <aside
-      aria-labelledby="follow-up-chat-title"
-      className="fixed inset-y-0 right-0 z-40 grid w-full max-w-5xl grid-rows-[auto_minmax(0,1fr)] border-l border-slate-200 bg-white shadow-2xl print:hidden lg:w-[86vw]"
-    >
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
-            Follow-up
-          </p>
-          <h2
-            id="follow-up-chat-title"
-            className="mt-1 text-xl font-semibold text-slate-950"
-          >
-            Conversations
-          </h2>
-        </div>
-        <button
-          type="button"
-          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-          onClick={onClose}
-        >
-          Close chat
-        </button>
-      </header>
-
-      <div className="grid min-h-0 lg:grid-cols-[280px_minmax(0,1fr)]">
+    <>
+      <button
+        className="fixed inset-0 z-40 bg-black/20 print:hidden"
+        aria-label="Dismiss chat backdrop"
+        type="button"
+        onClick={onClose}
+      />
+      <aside
+        aria-labelledby="follow-up-chat-title"
+        className="fixed inset-y-0 right-0 z-50 grid w-full max-w-5xl grid-cols-1 border-l border-[#cfc9bb] bg-[#fbfaf7] shadow-2xl print:hidden md:grid-cols-[280px_minmax(0,1fr)]"
+      >
         <nav
           aria-label="Conversations"
-          className="hidden min-h-0 border-r border-slate-200 bg-slate-50 p-3 lg:block"
+          className="hidden min-h-0 border-r border-[#d8d2c5] bg-white md:block"
         >
-          <ConversationList
-            activeConversationId={activeSession?.conversation.id ?? null}
-            onSelectConversation={onSelectConversation}
-            sessions={sessions}
-          />
+          <div className="border-b border-[#e4dfd4] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#146c60]">
+              Conversations
+            </p>
+            <p className="mt-2 text-sm text-[#7b7468]">
+              {sessions.length} active thread{sessions.length === 1 ? "" : "s"}
+            </p>
+          </div>
+          <div className="p-3">
+            <ConversationList
+              activeConversationId={activeSession?.conversation.id ?? null}
+              onSelectConversation={onSelectConversation}
+              sessions={sessions}
+            />
+          </div>
         </nav>
 
         <div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto]">
-          <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 lg:hidden">
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                Conversation
-              </span>
+          <div className="flex items-start justify-between gap-4 border-b border-[#d8d2c5] bg-white p-4">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#146c60]">
+                Follow-up
+              </p>
+              <h2
+                id="follow-up-chat-title"
+                className="mt-1 truncate text-lg font-semibold text-[#161616]"
+              >
+                Conversations
+              </h2>
+              <p className="mt-1 text-xs text-[#7b7468]">
+                Evidence-focused follow-up
+              </p>
               <select
-                className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
+                aria-label="Conversation"
+                className="mt-3 h-10 w-full border border-[#cfc9bb] bg-[#fbfaf7] px-2 text-sm outline-none md:hidden"
                 value={activeSession?.conversation.id ?? ""}
                 onChange={(event) => onSelectConversation(event.target.value)}
               >
@@ -111,7 +118,16 @@ export function FollowUpSlideout({
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
+            <button
+              type="button"
+              className="grid h-9 w-9 shrink-0 place-items-center border border-[#cfc9bb] text-[#3f3b35] transition hover:bg-[#f6f5f1]"
+              onClick={onClose}
+              title="Close chat"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">Close chat</span>
+            </button>
           </div>
 
           {activeSession === null ? (
@@ -120,22 +136,22 @@ export function FollowUpSlideout({
             <ActiveThread session={activeSession} />
           )}
 
-          <div className="border-t border-slate-200 bg-white p-4">
+          <div className="border-t border-[#d8d2c5] bg-white p-4">
             {error === "" ? null : (
               <p
-                className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+                className="mb-3 rounded-md border border-[#be123c] bg-[#fff1f2] px-3 py-2 text-sm text-[#9f1239]"
                 role="alert"
               >
                 {error}
               </p>
             )}
-            <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-              <label className="block">
+            <div className="flex gap-3">
+              <label className="min-w-0 flex-1">
                 <span className="sr-only">Follow-up question</span>
                 <textarea
                   value={draft}
                   onChange={(event) => onDraftChange(event.target.value)}
-                  className="min-h-16 w-full resize-none rounded-md border border-slate-300 bg-slate-50 p-3 text-sm text-slate-900 outline-none transition focus:border-blue-500"
+                  className="min-h-14 w-full resize-none border border-[#cfc9bb] bg-[#fbfaf7] p-3 text-sm text-[#161616] outline-none focus:border-[#146c60]"
                   placeholder="Ask a follow-up about this conversation..."
                   disabled={isLoading || activeSession === null}
                 />
@@ -148,15 +164,20 @@ export function FollowUpSlideout({
                   activeSession === null ||
                   draft.trim().length === 0
                 }
-                className="rounded-md bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                className="inline-flex h-14 items-center justify-center gap-2 bg-[#146c60] px-4 text-sm font-semibold text-white transition hover:bg-[#0f554b] disabled:cursor-not-allowed disabled:bg-[#8aa7a0]"
               >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
                 {isLoading ? "Sending" : "Send"}
               </button>
             </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
@@ -170,32 +191,53 @@ function FloatingChatMenu({
   readonly sessions: readonly BrowserFollowUpSession[];
 }) {
   return (
-    <div className="fixed bottom-4 right-4 z-30 w-[min(92vw,320px)] rounded-md border border-slate-200 bg-white p-3 shadow-xl print:hidden">
+    <div className="fixed bottom-4 right-4 z-30 print:hidden">
       <button
-        type="button"
-        className="flex w-full items-center justify-between rounded-md bg-slate-950 px-4 py-3 text-left text-sm font-semibold text-white"
+        className="flex items-center gap-2 rounded-md border border-[#cfc9bb] bg-white px-3 py-3 text-sm font-semibold text-[#25221e] shadow-lg transition hover:bg-[#f6f5f1]"
         onClick={onOpen}
+        type="button"
       >
+        <MessageSquare className="h-4 w-4 text-[#146c60]" aria-hidden="true" />
         <span>Chats</span>
-        <span>{sessions.length}</span>
+        <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[#146c60] px-1 text-xs text-white">
+          {sessions.length}
+        </span>
       </button>
-      <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-        Recent Threads
-      </p>
-      <div className="mt-2 grid gap-2">
-        {sessions.slice(0, 3).map((session) => (
+      <div className="absolute bottom-14 right-0 w-[min(320px,calc(100vw-2rem))] rounded-md border border-[#cfc9bb] bg-white p-3 shadow-xl">
+        <div className="flex items-center justify-between gap-3 border-b border-[#e4dfd4] pb-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#146c60]">
+              Recent Threads
+            </p>
+          </div>
           <button
-            key={session.conversation.id}
+            className="h-9 rounded-md bg-[#111111] px-3 text-xs font-semibold text-white transition hover:bg-[#333333]"
+            onClick={onOpen}
             type="button"
-            className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-800"
-            onClick={() => {
-              onSelectConversation(session.conversation.id);
-              onOpen();
-            }}
           >
-            {firstUserQuestion(session)}
+            Open
           </button>
-        ))}
+        </div>
+        <div className="mt-3 grid gap-2">
+          {sessions.slice(0, 3).map((session) => (
+            <button
+              key={session.conversation.id}
+              type="button"
+              className="rounded-md border border-[#e4dfd4] bg-[#fbfaf7] p-3 text-left transition hover:border-[#146c60] hover:bg-[#eef8f5]"
+              onClick={() => {
+                onSelectConversation(session.conversation.id);
+                onOpen();
+              }}
+            >
+              <p className="line-clamp-1 text-sm font-semibold text-[#25221e]">
+                {firstUserQuestion(session)}
+              </p>
+              <p className="mt-1 text-xs text-[#7b7468]">
+                {targetLabel(session.target)}
+              </p>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -212,7 +254,7 @@ function ConversationList({
 }) {
   if (sessions.length === 0) {
     return (
-      <p className="rounded-md border border-dashed border-slate-300 bg-white p-3 text-sm leading-6 text-slate-600">
+      <p className="rounded-md border border-dashed border-[#d8d2c5] bg-[#fbfaf7] p-3 text-sm leading-6 text-[#7b7468]">
         Ask a section question to start a thread.
       </p>
     );
@@ -227,14 +269,14 @@ function ConversationList({
           onClick={() => onSelectConversation(session.conversation.id)}
           className={`rounded-md border p-3 text-left transition ${
             session.conversation.id === activeConversationId
-              ? "border-blue-300 bg-blue-50"
-              : "border-slate-200 bg-white hover:bg-slate-50"
+              ? "border-[#146c60] bg-[#eef8f5]"
+              : "border-[#e4dfd4] bg-white hover:bg-[#f6f5f1]"
           }`}
         >
-          <p className="line-clamp-2 text-sm font-semibold text-slate-950">
+          <p className="line-clamp-2 text-sm font-semibold text-[#25221e]">
             {firstUserQuestion(session)}
           </p>
-          <p className="mt-1 text-xs text-slate-600">
+          <p className="mt-2 text-xs text-[#7b7468]">
             {targetLabel(session.target)}
           </p>
         </button>
@@ -245,12 +287,16 @@ function ConversationList({
 
 function EmptyThread() {
   return (
-    <div className="grid min-h-0 place-items-center bg-slate-50 p-6 text-center">
+    <div className="grid min-h-0 place-items-center bg-[#fbfaf7] p-6 text-center">
       <div>
-        <p className="text-lg font-semibold text-slate-950">
+        <MessageSquare
+          className="mx-auto h-10 w-10 text-[#146c60]"
+          aria-hidden="true"
+        />
+        <p className="mt-4 text-lg font-semibold text-[#161616]">
           No conversation selected
         </p>
-        <p className="mt-2 text-sm leading-6 text-slate-700">
+        <p className="mt-2 text-sm leading-6 text-[#7b7468]">
           Ask a section question to start a thread.
         </p>
       </div>
@@ -264,19 +310,19 @@ function ActiveThread({
   readonly session: BrowserFollowUpSession;
 }) {
   return (
-    <div className="min-h-0 overflow-y-auto bg-slate-50 p-4">
+    <div className="min-h-0 overflow-y-auto bg-[#fbfaf7] p-4">
       <div className="mx-auto grid max-w-3xl gap-4">
-        <div className="rounded-md border border-slate-200 bg-white p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+        <div className="border border-[#d8d2c5] bg-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#7b7468]">
             {targetLabel(session.target)}
           </p>
-          <h3 className="mt-2 text-xl font-semibold text-slate-950">
+          <h3 className="mt-2 text-xl font-semibold text-[#161616]">
             {firstUserQuestion(session)}
           </h3>
-          <p className="mt-3 text-sm font-semibold text-blue-700">
+          <p className="mt-3 text-sm font-semibold text-[#3b5bdb]">
             Searches matching repo files
           </p>
-          <p className="mt-1 text-sm leading-6 text-slate-700">
+          <p className="mt-1 text-sm leading-6 text-[#3f3b35]">
             {session.evidenceSummary}
           </p>
         </div>
@@ -296,18 +342,18 @@ function MessageBubble({ message }: { readonly message: ChatMessage }) {
     <div
       className={`max-w-[90%] rounded-md border p-4 ${
         message.role === "user"
-          ? "ml-auto border-emerald-200 bg-emerald-50"
-          : "mr-auto border-slate-200 bg-white"
+          ? "ml-auto border-[#146c60] bg-[#eef8f5]"
+          : "mr-auto border-[#d8d2c5] bg-white"
       }`}
     >
-      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#7b7468]">
         {message.role === "user" ? "You" : "Reviewer"}
       </p>
-      <p className="whitespace-pre-wrap text-sm leading-6 text-slate-800">
+      <p className="whitespace-pre-wrap text-sm leading-6 text-[#3f3b35]">
         {message.content}
       </p>
       {message.citations.length > 0 ? (
-        <p className="mt-2 break-words text-xs text-slate-600">
+        <p className="mt-2 break-words text-xs text-[#7b7468]">
           Evidence:{" "}
           {message.citations
             .map((citation) => citation.evidenceReference.id)
@@ -315,7 +361,7 @@ function MessageBubble({ message }: { readonly message: ChatMessage }) {
         </p>
       ) : null}
       {message.assumptions.length > 0 ? (
-        <p className="mt-2 text-xs text-slate-600">
+        <p className="mt-2 text-xs text-[#7b7468]">
           Assumptions:{" "}
           {message.assumptions
             .map((assumption) => assumption.statement)
@@ -329,11 +375,11 @@ function MessageBubble({ message }: { readonly message: ChatMessage }) {
 function AnswerSections({ answer }: { readonly answer: ChatAnswer }) {
   if (answer.status === "insufficient-context") {
     return (
-      <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
-        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-amber-800">
+      <div className="rounded-md border border-[#d97706] bg-[#fff7ed] p-3">
+        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[#c2410c]">
           Insufficient context
         </p>
-        <p className="mt-2 text-sm leading-6 text-slate-800">
+        <p className="mt-2 text-sm leading-6 text-[#3f3b35]">
           {answer.summary}
         </p>
         <SectionList
@@ -351,12 +397,12 @@ function AnswerSections({ answer }: { readonly answer: ChatAnswer }) {
   }
 
   return (
-    <div className="grid gap-3 rounded-md border border-slate-200 bg-white p-3">
+    <div className="grid gap-3 rounded-md border border-[#d8d2c5] bg-white p-3">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-emerald-700">
+        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[#146c60]">
           Evidence-backed answer
         </p>
-        <p className="mt-2 text-sm leading-6 text-slate-800">
+        <p className="mt-2 text-sm leading-6 text-[#3f3b35]">
           {answer.summary}
         </p>
       </div>
@@ -394,15 +440,15 @@ function SectionList({
   }
 
   return (
-    <section className="rounded-md border border-slate-200 bg-slate-50 p-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+    <section className="rounded-md border border-[#e4dfd4] bg-[#fbfaf7] p-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7b7468]">
         {title}
       </p>
       <ul className="mt-2 grid gap-2">
         {items.map((item, index) => (
           <li
             key={`${item}-${index}`}
-            className="text-sm leading-6 text-slate-800"
+            className="text-sm leading-6 text-[#3f3b35]"
           >
             {item}
           </li>

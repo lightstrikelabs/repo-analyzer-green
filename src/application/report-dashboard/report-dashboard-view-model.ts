@@ -132,7 +132,7 @@ const dashboardSections = [
   readonly sourceDimension: ReportDimensionKey;
 }[];
 
-const languageColors = ["#047857", "#2563eb", "#d97706", "#be123c", "#7c3aed"];
+const languageColors = ["#146c60", "#d97706", "#3b5bdb", "#c2410c", "#7c3aed"];
 
 export function buildReportDashboardViewModel(
   analysis: AnalyzeRepositoryResponse,

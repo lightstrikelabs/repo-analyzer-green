@@ -1,6 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  BarChart3,
+  Boxes,
+  FileText,
+  MessageSquare,
+  Send,
+  ShieldCheck,
+  TestTube2,
+  Wrench,
+} from "lucide-react";
 import { z } from "zod";
 
 import { buildReportDashboardViewModel } from "../../application/report-dashboard/report-dashboard-view-model";
@@ -29,6 +39,14 @@ import { FollowUpSlideout } from "../chat/follow-up-slideout";
 import { PrintReportButton } from "./print-report-button";
 import { ScoreRing } from "./score-ring";
 import { Sparkline } from "./sparkline";
+
+const sectionIcons = {
+  maintainability: Wrench,
+  testing: TestTube2,
+  security: ShieldCheck,
+  architecture: Boxes,
+  documentation: FileText,
+} satisfies Record<ReportDashboardSectionId, typeof Wrench>;
 
 export function ReportCardView({
   apiKey = "",
@@ -193,46 +211,34 @@ export function ReportCardView({
   }
 
   return (
-    <section className="space-y-5" aria-labelledby="report-title">
-      <header className="flex flex-wrap items-start justify-between gap-4 print:hidden">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-            Repository Quality
-          </p>
-          <h2
-            id="report-title"
-            className="mt-1 text-3xl font-semibold text-slate-950"
-          >
-            Report Card
-          </h2>
-        </div>
-        <PrintReportButton />
-      </header>
-
+    <section className="space-y-5" aria-labelledby="overview-title">
       <section
         aria-labelledby="overview-title"
         className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]"
       >
-        <div className="rounded-md border border-slate-200 bg-white p-5">
+        <div className="border border-[#d8d2c5] bg-white p-5">
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div className="min-w-0">
-              <p className="break-words text-sm font-medium text-slate-600">
+              <p className="break-words text-sm font-medium text-[#5f5b53]">
                 {dashboard.overview.repositoryLabel}
               </p>
               <h3
                 id="overview-title"
-                className="mt-2 text-2xl font-semibold text-slate-950"
+                className="mt-1 text-2xl font-semibold tracking-normal text-[#111111]"
               >
                 Evidence-backed report
               </h3>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-700">
+              <p className="mt-5 max-w-3xl text-sm leading-6 text-[#3f3b35]">
                 {dashboard.overview.summary}
               </p>
             </div>
-            <ScoreRing
-              score={dashboard.overview.overallScore}
-              grade={dashboard.overview.grade}
-            />
+            <div className="flex flex-col items-end gap-4">
+              <PrintReportButton />
+              <ScoreRing
+                score={dashboard.overview.overallScore}
+                grade={dashboard.overview.grade}
+              />
+            </div>
           </div>
 
           <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
@@ -248,9 +254,9 @@ export function ReportCardView({
           </dl>
         </div>
 
-        <div className="rounded-md border border-slate-200 bg-white p-5 lg:w-72">
-          <p className="text-sm font-semibold text-slate-950">Reviewer</p>
-          <p className="mt-2 text-sm leading-6 text-slate-700">
+        <div className="border border-[#d8d2c5] bg-white p-5 lg:w-72">
+          <p className="text-sm font-semibold text-[#111111]">Reviewer</p>
+          <p className="mt-2 text-sm leading-6 text-[#3f3b35]">
             {dashboard.overview.reviewerNote}
           </p>
         </div>
@@ -287,8 +293,8 @@ export function ReportCardView({
         ))}
       </section>
 
-      <details className="rounded-md border border-slate-200 bg-white p-4">
-        <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+      <details className="rounded-md border border-[#d8d2c5] bg-white p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-[#25221e]">
           Evidence, Caveats, And Suggested Follow-Ups
         </summary>
         <div className="mt-4 grid gap-4 lg:grid-cols-3">
@@ -347,12 +353,12 @@ function BigNumberTile({
   readonly bigNumber: ReportDashboardBigNumber;
 }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-4">
-      <p className="text-sm font-medium text-slate-600">{bigNumber.label}</p>
-      <p className="mt-2 break-words text-3xl font-semibold text-slate-950">
+    <div className="border border-[#d8d2c5] bg-white p-5">
+      <p className="text-sm font-medium text-[#5f5b53]">{bigNumber.label}</p>
+      <p className="mt-3 break-words text-4xl font-semibold tracking-normal text-[#111111]">
         {bigNumber.value}
       </p>
-      <p className="mt-1 text-sm leading-5 text-slate-600">
+      <p className="mt-2 text-sm leading-5 text-[#7b7468]">
         {bigNumber.detail}
       </p>
     </div>
@@ -369,38 +375,35 @@ function LanguageMixPanel({
   return (
     <section
       aria-labelledby="language-mix-title"
-      className="rounded-md border border-slate-200 bg-white p-5"
+      className="border border-[#d8d2c5] bg-white p-5"
     >
-      <p className="text-sm font-medium uppercase text-emerald-700">
-        Static evidence
-      </p>
-      <h3
-        id="language-mix-title"
-        className="mt-1 text-lg font-semibold text-slate-950"
-      >
-        Language Mix
-      </h3>
+      <div className="flex items-center gap-2">
+        <BarChart3 className="h-5 w-5 text-[#146c60]" aria-hidden="true" />
+        <h3 id="language-mix-title" className="text-lg font-semibold">
+          Language Mix
+        </h3>
+      </div>
 
       {emptyMessage === undefined ? (
         <div className="mt-5 grid gap-4">
           {languageSlices.map((slice) => (
             <div key={slice.language}>
               <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="font-medium text-slate-900">
+                <span className="font-medium text-[#3f3b35]">
                   {slice.language}
                 </span>
-                <span className="text-slate-600">{slice.percentOfCode}%</span>
+                <span className="text-[#7b7468]">{slice.percentOfCode}%</span>
               </div>
-              <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-200">
+              <div className="mt-2 h-3 overflow-hidden bg-[#ebe6db]">
                 <div
-                  className="h-full rounded-full"
+                  className="h-full"
                   style={{
                     width: `${Math.max(slice.percentOfCode, 3)}%`,
                     backgroundColor: slice.color,
                   }}
                 />
               </div>
-              <p className="mt-2 text-xs text-slate-600">
+              <p className="mt-2 text-xs text-[#7b7468]">
                 {formatNumber(slice.fileCount)} files,{" "}
                 {formatNumber(slice.codeLineCount)} code lines
               </p>
@@ -408,7 +411,7 @@ function LanguageMixPanel({
           ))}
         </div>
       ) : (
-        <p className="mt-5 text-sm leading-6 text-slate-700">{emptyMessage}</p>
+        <p className="mt-5 text-sm leading-6 text-[#3f3b35]">{emptyMessage}</p>
       )}
     </section>
   );
@@ -422,27 +425,24 @@ function ReviewerNotesPanel({
   return (
     <section
       aria-labelledby="reviewer-notes-title"
-      className="rounded-md border border-slate-200 bg-white p-5"
+      className="border border-[#d8d2c5] bg-white p-5"
     >
-      <p className="text-sm font-medium uppercase text-emerald-700">
-        Reviewer assessment
-      </p>
-      <h3
-        id="reviewer-notes-title"
-        className="mt-1 text-lg font-semibold text-slate-950"
-      >
-        Reviewer Notes
-      </h3>
+      <div className="flex items-center gap-2">
+        <MessageSquare className="h-5 w-5 text-[#3b5bdb]" aria-hidden="true" />
+        <h3 id="reviewer-notes-title" className="text-lg font-semibold">
+          Reviewer Notes
+        </h3>
+      </div>
       {notes.length === 0 ? (
-        <p className="mt-5 text-sm leading-6 text-slate-700">
+        <p className="mt-5 text-sm leading-6 text-[#3f3b35]">
           No reviewer notes were available.
         </p>
       ) : (
-        <ul className="mt-5 divide-y divide-slate-200">
+        <ul className="mt-5 divide-y divide-[#e4dfd4]">
           {notes.map((note, index) => (
             <li key={`${note.tone}-${index}`} className="py-3 first:pt-0">
-              <p className="text-sm leading-6 text-slate-800">{note.text}</p>
-              <p className="mt-1 text-xs font-semibold uppercase text-slate-500">
+              <p className="text-sm leading-6 text-[#3f3b35]">{note.text}</p>
+              <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#7b7468]">
                 {note.tone}
               </p>
             </li>
@@ -463,35 +463,32 @@ function ReportSectionPanel({
   readonly section: ReportDashboardSection;
 }) {
   const signals = [...section.highlights, ...section.risks, ...section.caveats];
+  const Icon = sectionIcons[section.id];
 
   return (
-    <article className="rounded-md border border-slate-200 bg-white p-5">
-      <div className="grid gap-5 xl:grid-cols-[170px_minmax(0,1fr)_minmax(220px,300px)]">
+    <article className="border border-[#d8d2c5] bg-white">
+      <div className="grid gap-5 p-5 lg:grid-cols-[240px_minmax(0,1fr)_minmax(260px,0.72fr)]">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h4 className="text-lg font-semibold text-slate-950">
+          <div className="flex items-center gap-2">
+            <Icon className="h-5 w-5 text-[#d97706]" aria-hidden="true" />
+            <h4 className="text-lg font-semibold text-[#161616]">
               {section.title}
             </h4>
-            <span className="rounded border border-slate-300 bg-slate-50 px-2 py-1 text-xs font-semibold uppercase text-slate-700">
-              {formatRating(section.rating)}
-            </span>
           </div>
-          <div className="mt-4">
+          <div className="mt-5 flex items-center gap-4">
             <ScoreRing
               score={section.score}
               grade={formatRating(section.rating)}
             />
-          </div>
-          <p className="mt-4 text-sm font-medium text-slate-900">
-            {section.confidenceLabel}
-          </p>
-          <div className="mt-4">
             <Sparkline points={section.chartPoints} />
           </div>
+          <p className="mt-4 text-sm font-medium text-[#3f3b35]">
+            {section.confidenceLabel}
+          </p>
         </div>
 
         <div className="min-w-0">
-          <p className="text-sm leading-6 text-slate-700">{section.summary}</p>
+          <p className="text-sm leading-6 text-[#3f3b35]">{section.summary}</p>
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             {section.metrics.map((metric) => (
               <MetricTile key={metric.label} metric={metric} />
@@ -539,17 +536,17 @@ function SectionAskBox({
   }
 
   return (
-    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+    <div className="border-t border-[#e4dfd4] pt-5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
       <label className="block">
-        <span className="text-sm font-semibold text-slate-900">
+        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7b7468]">
           Ask About {sectionTitle}
         </span>
         <textarea
           aria-label={`Ask About ${sectionTitle}`}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          className="mt-2 h-24 w-full resize-none rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500"
-          placeholder={`Ask about ${sectionTitle.toLowerCase()}...`}
+          className="mt-3 min-h-28 w-full resize-y border border-[#cfc9bb] bg-[#fbfaf7] p-3 text-sm text-[#161616] outline-none focus:border-[#146c60]"
+          placeholder="What should we fix first?"
           disabled={loading}
         />
       </label>
@@ -557,8 +554,10 @@ function SectionAskBox({
         type="button"
         onClick={handleOpenChat}
         disabled={loading}
-        className="mt-3 h-10 w-full rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+        className="mt-3 inline-flex h-10 items-center justify-center gap-2 bg-[#146c60] px-4 text-sm font-semibold text-white transition hover:bg-[#0f554b] disabled:cursor-not-allowed disabled:bg-[#8aa7a0]"
+        title="Ask follow-up"
       >
+        <Send className="h-4 w-4" aria-hidden="true" />
         {loading ? "Opening" : "Open Chat"}
       </button>
     </div>
@@ -571,14 +570,14 @@ function MetricTile({
   readonly metric: ReportDashboardSection["metrics"][number];
 }) {
   return (
-    <div className="border-t border-slate-200 pt-3">
-      <p className="text-xs font-semibold uppercase text-slate-500">
+    <div className="border-t border-[#e4dfd4] pt-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7b7468]">
         {metric.label}
       </p>
-      <p className="mt-1 break-words text-2xl font-semibold text-slate-950">
+      <p className="mt-1 break-words text-2xl font-semibold tracking-normal text-[#161616]">
         {metric.value}
       </p>
-      <p className="mt-1 text-xs leading-5 text-slate-600">{metric.detail}</p>
+      <p className="mt-1 text-xs leading-5 text-[#7b7468]">{metric.detail}</p>
     </div>
   );
 }
@@ -594,15 +593,15 @@ function TextList({
 }) {
   return (
     <section>
-      <h5 className="text-sm font-semibold text-slate-950">{title}</h5>
+      <h5 className="text-sm font-semibold text-[#161616]">{title}</h5>
       {items.length === 0 ? (
-        <p className="mt-2 text-sm leading-6 text-slate-600">{emptyMessage}</p>
+        <p className="mt-2 text-sm leading-6 text-[#7b7468]">{emptyMessage}</p>
       ) : (
-        <ul className="mt-2 space-y-2 text-sm leading-6 text-slate-700">
+        <ul className="mt-2 space-y-2 text-sm leading-5 text-[#3f3b35]">
           {items.map((item, index) => (
             <li
               key={`${item}-${index}`}
-              className="rounded-md bg-slate-50 px-3 py-2"
+              className="border border-[#e4dfd4] bg-[#fbfaf7] px-3 py-2"
             >
               {item}
             </li>
@@ -628,9 +627,9 @@ function DetailList({
 }) {
   return (
     <section>
-      <h4 className="text-sm font-semibold text-slate-950">{title}</h4>
+      <h4 className="text-sm font-semibold text-[#161616]">{title}</h4>
       {items.length === 0 ? (
-        <p className="mt-2 text-sm leading-6 text-slate-600">{emptyMessage}</p>
+        <p className="mt-2 text-sm leading-6 text-[#7b7468]">{emptyMessage}</p>
       ) : (
         <ul className="mt-2 space-y-2">
           {items.map((item, index) => (
@@ -638,10 +637,10 @@ function DetailList({
               key={`${item.title}-${item.detail}-${index}`}
               className="text-sm"
             >
-              <p className="font-medium text-slate-950">{item.title}</p>
-              <p className="mt-1 leading-6 text-slate-700">{item.detail}</p>
+              <p className="font-medium text-[#161616]">{item.title}</p>
+              <p className="mt-1 leading-6 text-[#3f3b35]">{item.detail}</p>
               {item.meta === undefined || item.meta === "" ? null : (
-                <p className="mt-1 break-words text-xs text-slate-500">
+                <p className="mt-1 break-words text-xs text-[#7b7468]">
                   {item.meta}
                 </p>
               )}
@@ -791,10 +790,10 @@ function MetadataItem({
 }) {
   return (
     <div>
-      <dt className="text-xs font-semibold uppercase text-slate-500">
+      <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7b7468]">
         {label}
       </dt>
-      <dd className="mt-1 break-words font-medium text-slate-950">{value}</dd>
+      <dd className="mt-1 break-words font-medium text-[#161616]">{value}</dd>
     </div>
   );
 }
