@@ -139,26 +139,34 @@ const analysis: AnalyzeRepositoryResponse = {
 };
 
 describe("ReportCardView", () => {
-  it("renders dashboard summary, language mix, dimensions, findings, caveats, missing evidence, and evidence references", () => {
+  it("renders the red-style dashboard overview, big numbers, language mix, notes, and sections", () => {
     const html = renderToStaticMarkup(<ReportCardView analysis={analysis} />);
 
     expect(html).toContain("minimal-node-library");
-    expect(html).toContain("library");
-    expect(html).toContain("Report overview");
+    expect(html).toContain("Overall Score");
+    expect(html).toContain("Source Files");
+    expect(html).toContain("Code Lines");
+    expect(html).toContain("Test Ratio");
+    expect(html).toContain("Strongest Area");
     expect(html).toContain("Language Mix");
     expect(html).toContain("TypeScript");
-    expect(html).toContain("80% of code");
+    expect(html).toContain("80%");
     expect(html).toContain("Reviewer Notes");
-    expect(html).toContain("Dimensions");
-    expect(html).toContain("Verifiability");
-    expect(html).toContain("good");
+    expect(html).toContain("Maintainability");
+    expect(html).toContain("Testing");
+    expect(html).toContain("Security");
+    expect(html).toContain("Architecture");
+    expect(html).toContain("Documentation");
+    expect(html).toContain("Good");
     expect(html).toContain("high confidence");
-    expect(html).toContain("Dimension score");
+    expect(html).toContain("Score");
+    expect(html).toContain("Signals");
+    expect(html).toContain("Next Checks");
     expect(html).toContain("Test depth");
     expect(html).toContain("Limited fixture evidence");
     expect(html).toContain("Release workflow history");
-    expect(html).toContain("evidence:test-file");
-    expect(html).toContain("How is this package released and verified?");
+    expect(html).toContain("Ask About Testing");
+    expect(html).toContain("Open Chat");
   });
 
   it("renders a Download PDF button so users can export the report", () => {
@@ -193,13 +201,6 @@ describe("ReportCardView", () => {
     );
   });
 
-  it("does not collapse the report into a single overall score", () => {
-    const html = renderToStaticMarkup(<ReportCardView analysis={analysis} />);
-
-    expect(html).not.toContain("Overall score");
-    expect(html).not.toContain("Total score");
-  });
-
   it("renders explicit empty states when language mix and caveats are absent", () => {
     const html = renderToStaticMarkup(
       <ReportCardView
@@ -208,6 +209,12 @@ describe("ReportCardView", () => {
           reportCard: {
             ...reportCard,
             caveats: [],
+            dimensionAssessments: reportCard.dimensionAssessments.map(
+              (assessment) => ({
+                ...assessment,
+                findings: [],
+              }),
+            ),
           },
           dashboardInsights: {
             ...analysis.dashboardInsights,
@@ -220,6 +227,32 @@ describe("ReportCardView", () => {
     expect(html).toContain(
       "No language mix was available in the collected evidence.",
     );
-    expect(html).toContain("No caveats were reported.");
+    expect(html).toContain("No reviewer notes were available.");
+  });
+
+  it("renders missing-score sections without pretending evidence exists", () => {
+    const html = renderToStaticMarkup(
+      <ReportCardView
+        analysis={{
+          ...analysis,
+          reportCard: {
+            ...reportCard,
+            dimensionAssessments: reportCard.dimensionAssessments.map(
+              (assessment) => ({
+                ...assessment,
+                score: undefined,
+                rating: "not-assessed",
+              }),
+            ),
+          },
+        }}
+      />,
+    );
+
+    expect(html).toContain("N/A");
+    expect(html).toContain("Not assessed");
+    expect(html).toContain(
+      "Security evidence was not available in this report.",
+    );
   });
 });
