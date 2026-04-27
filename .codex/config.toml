@@ -1,0 +1,18 @@
+# Project-local Codex CLI configuration.
+#
+# Project-local Codex hooks require the project to be marked trusted via
+# `[projects."..."]` in ~/.codex/config.toml. Project-local skills load even
+# when the project is untrusted; only hooks and exec policies are gated.
+#
+# Schema notes: this hook block is the natural translation of Claude Code's
+# .claude/settings.json `hooks` block into TOML, based on inspection of the
+# Codex CLI 0.125.0 binary's `HookHandlerConfig` and `ConfiguredHookMatcherGroup`
+# structures. It mirrors the cross-agent guidance in docs/agent-compat.md.
+# Verify against authoritative Codex docs before relying in production.
+
+[[hooks.PreToolUse]]
+matcher = "Edit|Write|MultiEdit"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "node scripts/red-green-gate.ts"
