@@ -72,3 +72,4 @@ If a task conflicts with those documents, call out the conflict before editing. 
 - Preserve provenance, confidence, caveats, and missing evidence in report behavior.
 - Do not treat raw test LOC, raw coverage, or single static scores as direct proof of repository quality.
 - Red-green enforcement is shared tooling, not a judgment call: `.claude/settings.json` guards in-session source edits, `lefthook.yml` guards staged commits, and both rely on `scripts/red-green-gate.ts`. Update the script and the two hook surfaces together when changing the workflow.
+- Cross-agent compatibility (Claude Code, Codex CLI, pi) is captured in [docs/agent-compat.md](docs/agent-compat.md). Shared skills live at `.agents/skills/`; each agent reaches them through a relative symlink. Keep the three hook surfaces (`.claude/settings.json`, `.codex/config.toml`, future `.pi/extensions/...`) aligned when changing red-green behavior.

@@ -14,6 +14,7 @@ import process from "node:process";
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_ALLOWLIST,
   decide,
   recentTestEditsFromLedger,
   type Ledger,
@@ -80,6 +81,28 @@ const allowlist: readonly string[] = [
   ".github/**",
   ".claude/**",
 ];
+
+describe("red-green-gate DEFAULT_ALLOWLIST", () => {
+  it.each([
+    [".agents/skills/foo/SKILL.md"],
+    [".codex/config.toml"],
+    [".codex/skills"],
+    [".pi/extensions/red-green-gate/index.js"],
+    [".pi/skills"],
+  ])(
+    "permits agent-config path %s without requiring a colocated test",
+    (filePath) => {
+      const decision = decide({
+        filesTouched: [filePath],
+        recentTestEdits: [],
+        allowlist: DEFAULT_ALLOWLIST,
+        overrideMarkers: new Map(),
+      });
+
+      expect(decision.allowed).toBe(true);
+    },
+  );
+});
 
 describe("red-green-gate decide", () => {
   it("blocks editing a non-test source file when no colocated test was edited recently", () => {
