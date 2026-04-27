@@ -21,12 +21,27 @@ test("runs the repository analysis workflow", async ({ page }) => {
   await expect(
     page.getByText("local-fixture:minimal-node-library @ fixture"),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Dimensions" })).toBeVisible();
+  await expect(page.getByText("Overall Score", { exact: true })).toBeVisible();
+  await expect(page.getByText("Source Files", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Caveats And Missing Evidence" }),
+    page.getByRole("heading", { name: "Language Mix" }),
+  ).toBeVisible();
+  const testingPanel = page.locator("article").filter({
+    has: page.getByRole("heading", { name: "Testing" }),
+  });
+  await expect(
+    testingPanel.getByText("Signals", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByLabel("Dimensions").getByText("evidence:test-file").first(),
+    testingPanel.getByText("Next Checks", { exact: true }),
+  ).toBeVisible();
+
+  await page
+    .getByText("Evidence, Caveats, And Suggested Follow-Ups", { exact: true })
+    .click();
+  await expect(page.getByText("No caveats were reported.")).toBeVisible();
+  await expect(
+    page.getByText("Package manifest", { exact: true }),
   ).toBeVisible();
 
   await page.reload();

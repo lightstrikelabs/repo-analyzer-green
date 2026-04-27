@@ -43,11 +43,15 @@ test.describe("red UI/UX parity", () => {
       .fill("https://github.com/lightstrikelabs/repo-analyzer-green");
     await page.getByRole("button", { name: "Analyze" }).click();
 
-    await expect(page.getByText("Reviewer Notes")).toBeVisible();
-    await expect(page.getByText("Overall Score")).toBeVisible();
-    await expect(page.getByText("Source Files")).toBeVisible();
-    await expect(page.getByText("Code Lines")).toBeVisible();
-    await expect(page.getByText("Test Ratio")).toBeVisible();
+    await expect(
+      page.getByText("Reviewer Notes", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Overall Score", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("Source Files", { exact: true })).toBeVisible();
+    await expect(page.getByText("Code Lines", { exact: true })).toBeVisible();
+    await expect(page.getByText("Test Ratio", { exact: true })).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Language Mix" }),
     ).toBeVisible();
@@ -66,10 +70,14 @@ test.describe("red UI/UX parity", () => {
       "Architecture",
       "Documentation",
     ]) {
-      const panel = page.locator("article").filter({ hasText: section });
+      const panel = page.locator("article").filter({
+        has: page.getByRole("heading", { name: section }),
+      });
       await expect(panel.getByRole("heading", { name: section })).toBeVisible();
-      await expect(panel.getByText("Signals")).toBeVisible();
-      await expect(panel.getByText("Next Checks")).toBeVisible();
+      await expect(panel.getByText("Signals", { exact: true })).toBeVisible();
+      await expect(
+        panel.getByText("Next Checks", { exact: true }),
+      ).toBeVisible();
       await expect(panel.getByLabel(`Ask About ${section}`)).toBeVisible();
       await expect(
         panel.getByRole("button", { name: "Open Chat" }),

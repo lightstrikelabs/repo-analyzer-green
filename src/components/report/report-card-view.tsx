@@ -22,7 +22,7 @@ export function ReportCardView({
     .toSorted((left, right) => (right.score ?? 0) - (left.score ?? 0))[0];
 
   return (
-    <article className="space-y-5" aria-labelledby="report-title">
+    <section className="space-y-5" aria-labelledby="report-title">
       <header className="flex flex-wrap items-start justify-between gap-4 print:hidden">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
@@ -78,7 +78,7 @@ export function ReportCardView({
         </div>
 
         <div className="rounded-md border border-slate-200 bg-white p-5 lg:w-72">
-          <p className="text-sm font-semibold text-slate-950">Reviewer Notes</p>
+          <p className="text-sm font-semibold text-slate-950">Reviewer</p>
           <p className="mt-2 text-sm leading-6 text-slate-700">
             {dashboard.overview.reviewerNote}
           </p>
@@ -149,7 +149,7 @@ export function ReportCardView({
       </details>
 
       <FollowUpPanel analysis={analysis} />
-    </article>
+    </section>
   );
 }
 
@@ -383,8 +383,11 @@ function TextList({
         <p className="mt-2 text-sm leading-6 text-slate-600">{emptyMessage}</p>
       ) : (
         <ul className="mt-2 space-y-2 text-sm leading-6 text-slate-700">
-          {items.map((item) => (
-            <li key={item} className="rounded-md bg-slate-50 px-3 py-2">
+          {items.map((item, index) => (
+            <li
+              key={`${item}-${index}`}
+              className="rounded-md bg-slate-50 px-3 py-2"
+            >
               {item}
             </li>
           ))}
@@ -414,8 +417,11 @@ function DetailList({
         <p className="mt-2 text-sm leading-6 text-slate-600">{emptyMessage}</p>
       ) : (
         <ul className="mt-2 space-y-2">
-          {items.map((item) => (
-            <li key={`${item.title}-${item.detail}`} className="text-sm">
+          {items.map((item, index) => (
+            <li
+              key={`${item.title}-${item.detail}-${index}`}
+              className="text-sm"
+            >
               <p className="font-medium text-slate-950">{item.title}</p>
               <p className="mt-1 leading-6 text-slate-700">{item.detail}</p>
               {item.meta === undefined || item.meta === "" ? null : (
