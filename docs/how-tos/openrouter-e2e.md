@@ -1,8 +1,8 @@
 # How To Configure OpenRouter For E2E Tests
 
-This guide documents the GitHub Actions configuration for future E2E tests that exercise OpenRouter-backed reviewer or follow-up behavior.
+This guide documents the GitHub Actions configuration for E2E and live contract tests that exercise OpenRouter-backed reviewer or follow-up behavior.
 
-The foundational E2E test should stay deterministic and fake-backed. Live-provider E2E should be added as a separate, explicitly scoped workflow or job so ordinary product checks do not depend on paid/network model calls unless that dependency is intentional.
+The foundational E2E test should stay deterministic and fake-backed. Live-provider checks should stay in separate, explicitly scoped workflows or jobs so ordinary product checks do not depend on paid/network model calls unless that dependency is intentional.
 
 ## GitHub Actions Secret
 
@@ -66,20 +66,37 @@ OpenRouter configuration is parsed at the provider boundary in `src/infrastructu
 
 The OpenRouter chat provider returns typed provider failures instead of throwing provider details into the domain. Missing keys, network failures, non-2xx responses, invalid response shapes, and empty or reasoning-only responses should become user-facing caveats that say OpenRouter output is unavailable. Do not include raw provider error bodies or secret values in user-facing UI, persisted reports, traces, or PR/issue text.
 
-## Local Live Contract Check
+## Local Live Contract Checks
 
 The normal test suite must not depend on live model calls. To verify the OpenRouter request contract locally, run the skipped-by-default live contract test with a request-scoped key:
 
 ```bash
-OPENROUTER_API_KEY="<local key>" RUN_OPENROUTER_LIVE=1 pnpm vitest run test/infrastructure/llm/openrouter-live-contract.test.ts
+OPENROUTER_API_KEY="<local key>" RUN_OPENROUTER_LIVE=1 pnpm exec vitest run test/infrastructure/llm/openrouter-live-contract.test.ts
 ```
 
 This test uses the configured default `openai/gpt-5-mini` and the explicit `openrouter/free` option, requests JSON object output, and asserts that OpenRouter returns parseable JSON content. Do not commit keys, paste keys into issue bodies, or include raw provider responses in logs.
 
+To verify the follow-up route boundary with a live model, run:
+
+```bash
+OPENROUTER_API_KEY="<local key>" RUN_OPENROUTER_LIVE=1 pnpm exec vitest run test/app/follow-up-live-contract.test.ts
+```
+
+This test exercises `/api/follow-up` with a fixture-backed report card and asserts that the route returns a validated chat-answer contract. It does not replace the deterministic Playwright E2E suite and should remain opt-in because it uses a paid/network provider.
+
+When using a local `.env.local`, load it without printing the key:
+
+```bash
+set -a
+. ./.env.local
+set +a
+RUN_OPENROUTER_LIVE=1 pnpm exec vitest run test/app/follow-up-live-contract.test.ts
+```
+
 ## Safety Rules
 
 - Keep the deterministic foundational E2E fake-backed.
-- Put live OpenRouter E2E in its own clearly named job.
+- Put live OpenRouter E2E or live contract checks in their own clearly named jobs.
 - Avoid running live-provider E2E on untrusted fork pull requests unless secrets are unavailable or the job is explicitly guarded.
 - Use a low-cost, structured-output-capable default where possible.
 - Fail with a clear missing-secret message if a live-provider job is manually requested without `OPENROUTER_API_KEY`.

@@ -66,6 +66,8 @@ Full local CI-equivalent check:
 pnpm run ci
 ```
 
+Opt-in OpenRouter live contract checks are documented in [docs/how-tos/openrouter-e2e.md](docs/how-tos/openrouter-e2e.md). They are not part of the deterministic default test suite.
+
 The scaffold intentionally contains only the application shell, architecture folders, and tooling. Repository analysis, reviewer assessment, durable persistence, auth, and deployment integrations are tracked as separate issues.
 
 ## Local Persistence

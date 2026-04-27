@@ -127,8 +127,12 @@ export async function POST(request: Request): Promise<Response> {
       new OpenRouterChatReviewer({
         config: options.openRouterConfig,
         controls: {
-          maxOutputTokens: 900,
-          temperature: 0.25,
+          maxOutputTokens: 4_000,
+          reasoning: {
+            effort: "minimal",
+            exclude: true,
+          },
+          temperature: 0.2,
         },
       }),
   });

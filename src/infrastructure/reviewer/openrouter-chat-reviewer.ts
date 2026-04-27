@@ -5,10 +5,17 @@ import {
   ChatAnswerContractSchema,
   type ChatAnswerContract,
 } from "../../domain/chat/chat-answer";
+import type { ConversationTarget } from "../../domain/chat/conversation";
 import type {
   ChatReviewer,
   ChatReviewerRequest,
 } from "../../application/follow-up-chat/follow-up-chat";
+import type {
+  DimensionAssessment,
+  ReportCard,
+  ReportCaveat,
+  ReportFinding,
+} from "../../domain/report/report-card";
 import {
   type OpenRouterChatCompletionControls,
   OpenRouterChatCompletionProvider,
@@ -54,7 +61,7 @@ export type OpenRouterChatReviewerOptions = {
   readonly now?: () => Date;
 };
 
-const DefaultFollowUpMaxOutputTokens = 1_200;
+const DefaultFollowUpMaxOutputTokens = 4_000;
 const DefaultFollowUpTemperature = 0.2;
 
 const ProviderChatAnswerResponseSchema = z
@@ -123,7 +130,7 @@ export class OpenRouterChatReviewer implements ChatReviewer {
     }
 
     const parsedAnswer = ProviderChatAnswerResponseSchema.safeParse(
-      parsedJson.value,
+      normalizeChatAnswerResponseInput(parsedJson.value),
     );
     if (!parsedAnswer.success) {
       throw new FollowUpAnswerValidationError(
@@ -159,6 +166,10 @@ function chatControls(
   return {
     maxOutputTokens:
       controls?.maxOutputTokens ?? DefaultFollowUpMaxOutputTokens,
+    reasoning: controls?.reasoning ?? {
+      effort: "minimal",
+      exclude: true,
+    },
     responseFormat: controls?.responseFormat ?? "json_object",
     temperature: controls?.temperature ?? DefaultFollowUpTemperature,
   };
@@ -176,7 +187,10 @@ type JsonParseResult =
 function systemPrompt(): string {
   return [
     "You answer follow-up questions about a repository quality report.",
-    "Return JSON only matching the chat-answer contract.",
+    "Return JSON only matching the chat-answer contract exactly.",
+    "The top-level response must be an object with one answer property.",
+    "Use the key summary for answer text; never use text, message, or answerText.",
+    "Do not include keys outside the requested response shape.",
     "Cite evidence references for every evidence-backed claim.",
     "Use insufficient-context when snippets or report context cannot support an answer.",
   ].join(" ");
@@ -184,17 +198,208 @@ function systemPrompt(): string {
 
 function promptContext(request: ChatReviewerRequest) {
   return {
-    reportCard: request.reportCard,
-    target: request.target,
+    report: compactReportContext(request.reportCard, request.target),
     question: request.question,
     evidence: request.evidence,
     responseShape: {
       answer: {
         schemaVersion: "chat-answer.v1",
-        status: "answered | insufficient-context",
+        status: "answered",
+        summary: "string",
+        evidenceBackedClaims: [
+          {
+            claim: "string",
+            citations: [
+              {
+                evidenceReference:
+                  "copy one exact evidenceReference object from evidence.snippets",
+                quote: "optional short quote from the snippet",
+              },
+            ],
+          },
+        ],
+        assumptions: [],
+        caveats: [
+          {
+            summary: "string",
+            missingEvidence: [],
+          },
+        ],
+        suggestedNextQuestions: [
+          {
+            question: "string",
+            rationale: "string",
+          },
+        ],
+      },
+      insufficientContextAnswer: {
+        schemaVersion: "chat-answer.v1",
+        status: "insufficient-context",
+        summary: "string",
+        missingContext: [
+          {
+            reason: "string",
+            requestedEvidence: "optional string",
+          },
+        ],
+        suggestedNextQuestions: [
+          {
+            question: "string",
+            rationale: "string",
+          },
+        ],
       },
     },
   };
+}
+
+function compactReportContext(
+  reportCard: ReportCard,
+  target: ConversationTarget,
+) {
+  return {
+    id: reportCard.id,
+    schemaVersion: reportCard.schemaVersion,
+    generatedAt: reportCard.generatedAt,
+    repository: reportCard.repository,
+    assessedArchetype: reportCard.assessedArchetype,
+    scoringPolicy: reportCard.scoringPolicy,
+    reviewerMetadata: reportCard.reviewerMetadata,
+    target: compactTargetContext(reportCard, target),
+  };
+}
+
+function compactTargetContext(
+  reportCard: ReportCard,
+  target: ConversationTarget,
+) {
+  switch (target.kind) {
+    case "report":
+      return {
+        kind: "report" as const,
+        dimensions: reportCard.dimensionAssessments.map(compactDimension),
+        caveats: reportCard.caveats.map(compactCaveat),
+        recommendedNextQuestions: reportCard.recommendedNextQuestions,
+      };
+    case "dimension": {
+      const assessment = reportCard.dimensionAssessments.find(
+        (candidate) => candidate.dimension === target.dimension,
+      );
+      return {
+        kind: "dimension" as const,
+        assessment:
+          assessment === undefined ? undefined : compactDimension(assessment),
+        caveats:
+          assessment === undefined
+            ? []
+            : caveatsForDimension(reportCard, assessment).map(compactCaveat),
+      };
+    }
+    case "finding": {
+      const match = findFinding(reportCard, target.findingId);
+      return {
+        kind: "finding" as const,
+        finding:
+          match === undefined ? undefined : compactFinding(match.finding),
+        dimension:
+          match === undefined ? undefined : compactDimension(match.assessment),
+      };
+    }
+    case "caveat": {
+      const caveat = reportCard.caveats.find(
+        (candidate) => candidate.id === target.caveatId,
+      );
+      return {
+        kind: "caveat" as const,
+        caveat: caveat === undefined ? undefined : compactCaveat(caveat),
+        affectedDimensions:
+          caveat === undefined
+            ? []
+            : reportCard.dimensionAssessments
+                .filter((assessment) =>
+                  caveat.affectedDimensions.includes(assessment.dimension),
+                )
+                .map(compactDimension),
+      };
+    }
+    case "evidence":
+      return {
+        kind: "evidence" as const,
+        evidenceReference: target.evidenceReference,
+      };
+  }
+}
+
+function compactDimension(assessment: DimensionAssessment) {
+  return {
+    dimension: assessment.dimension,
+    title: assessment.title,
+    summary: assessment.summary,
+    rating: assessment.rating,
+    ...(assessment.score === undefined ? {} : { score: assessment.score }),
+    confidence: assessment.confidence,
+    evidenceReferences: assessment.evidenceReferences,
+    findings: assessment.findings.map(compactFinding),
+    caveatIds: assessment.caveatIds,
+  };
+}
+
+function compactFinding(finding: ReportFinding) {
+  return {
+    id: finding.id,
+    dimension: finding.dimension,
+    severity: finding.severity,
+    title: finding.title,
+    summary: finding.summary,
+    confidence: finding.confidence,
+    evidenceReferences: finding.evidenceReferences,
+  };
+}
+
+function compactCaveat(caveat: ReportCaveat) {
+  return {
+    id: caveat.id,
+    title: caveat.title,
+    summary: caveat.summary,
+    affectedDimensions: caveat.affectedDimensions,
+    missingEvidence: caveat.missingEvidence,
+  };
+}
+
+function caveatsForDimension(
+  reportCard: ReportCard,
+  assessment: DimensionAssessment,
+): readonly ReportCaveat[] {
+  return reportCard.caveats.filter(
+    (caveat) =>
+      assessment.caveatIds.includes(caveat.id) ||
+      caveat.affectedDimensions.includes(assessment.dimension),
+  );
+}
+
+function findFinding(
+  reportCard: ReportCard,
+  findingId: string,
+):
+  | {
+      readonly assessment: DimensionAssessment;
+      readonly finding: ReportFinding;
+    }
+  | undefined {
+  for (const assessment of reportCard.dimensionAssessments) {
+    const finding = assessment.findings.find(
+      (candidate) => candidate.id === findingId,
+    );
+
+    if (finding !== undefined) {
+      return {
+        assessment,
+        finding,
+      };
+    }
+  }
+
+  return undefined;
 }
 
 function repositoryLabel(request: ChatReviewerRequest): string {
@@ -218,6 +423,113 @@ function parseJson(content: string): JsonParseResult {
       success: false,
     };
   }
+}
+
+function normalizeChatAnswerResponseInput(value: unknown): unknown {
+  if (!isRecord(value) || !isRecord(value.answer)) {
+    return value;
+  }
+
+  return {
+    ...value,
+    answer: normalizeChatAnswerInput(value.answer),
+  };
+}
+
+function normalizeChatAnswerInput(answer: Record<string, unknown>): unknown {
+  return withoutUndefinedEntries({
+    ...answer,
+    summary: normalizeAnswerSummary(answer),
+    evidenceBackedClaims: normalizeEvidenceBackedClaims(
+      answer.evidenceBackedClaims,
+    ),
+    text: undefined,
+    message: undefined,
+    answerText: undefined,
+  });
+}
+
+function normalizeAnswerSummary(answer: Record<string, unknown>): unknown {
+  if (typeof answer.summary === "string" && answer.summary.trim() !== "") {
+    return answer.summary;
+  }
+
+  if (typeof answer.text === "string" && answer.text.trim() !== "") {
+    return answer.text;
+  }
+
+  if (
+    typeof answer.answerText === "string" &&
+    answer.answerText.trim() !== ""
+  ) {
+    return answer.answerText;
+  }
+
+  if (typeof answer.message === "string" && answer.message.trim() !== "") {
+    return answer.message;
+  }
+
+  return answer.summary;
+}
+
+function normalizeEvidenceBackedClaims(value: unknown): unknown {
+  if (!Array.isArray(value)) {
+    return value;
+  }
+
+  return value.map((claim) => {
+    if (!isRecord(claim)) {
+      return claim;
+    }
+
+    return {
+      ...claim,
+      citations: normalizeCitations(claim.citations),
+    };
+  });
+}
+
+function normalizeCitations(value: unknown): unknown {
+  if (!Array.isArray(value)) {
+    return value;
+  }
+
+  return value.map((citation) => {
+    if (!isRecord(citation)) {
+      return citation;
+    }
+
+    return {
+      ...citation,
+      evidenceReference: normalizeCitationEvidenceReference(
+        citation.evidenceReference,
+      ),
+    };
+  });
+}
+
+function normalizeCitationEvidenceReference(value: unknown): unknown {
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  if (isRecord(value.evidenceReference)) {
+    return value.evidenceReference;
+  }
+
+  return value;
+}
+
+function withoutUndefinedEntries(
+  record: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(record).filter((entry) => entry[1] !== undefined),
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function toValidationIssue(issue: z.core.$ZodIssue): FollowUpValidationIssue {
