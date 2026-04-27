@@ -437,16 +437,35 @@ function normalizeChatAnswerResponseInput(value: unknown): unknown {
 }
 
 function normalizeChatAnswerInput(answer: Record<string, unknown>): unknown {
-  return withoutUndefinedEntries({
+  const normalizedAnswer = withoutUndefinedEntries({
     ...answer,
     summary: normalizeAnswerSummary(answer),
-    evidenceBackedClaims: normalizeEvidenceBackedClaims(
-      answer.evidenceBackedClaims,
-    ),
     text: undefined,
     message: undefined,
     answerText: undefined,
   });
+
+  if (answer.status === "insufficient-context") {
+    return withoutUndefinedEntries({
+      ...normalizedAnswer,
+      missingContext: normalizeMissingContext(answer),
+      evidenceBackedClaims: undefined,
+      assumptions: undefined,
+      caveats: undefined,
+    });
+  }
+
+  if (answer.status === "answered") {
+    return withoutUndefinedEntries({
+      ...normalizedAnswer,
+      evidenceBackedClaims: normalizeEvidenceBackedClaims(
+        answer.evidenceBackedClaims,
+      ),
+      missingContext: undefined,
+    });
+  }
+
+  return normalizedAnswer;
 }
 
 function normalizeAnswerSummary(answer: Record<string, unknown>): unknown {
@@ -487,6 +506,57 @@ function normalizeEvidenceBackedClaims(value: unknown): unknown {
       citations: normalizeCitations(claim.citations),
     };
   });
+}
+
+function normalizeMissingContext(
+  answer: Record<string, unknown>,
+): readonly Record<string, unknown>[] | unknown {
+  if (Array.isArray(answer.missingContext)) {
+    return answer.missingContext;
+  }
+
+  const caveatContext = missingContextFromCaveats(answer.caveats);
+  if (caveatContext.length > 0) {
+    return caveatContext;
+  }
+
+  return [
+    {
+      reason:
+        "The model reported insufficient context without specific missing context details.",
+    },
+  ];
+}
+
+function missingContextFromCaveats(
+  value: unknown,
+): readonly Record<string, unknown>[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((caveat) => {
+    if (!isRecord(caveat) || typeof caveat.summary !== "string") {
+      return [];
+    }
+
+    const requestedEvidence = firstString(caveat.missingEvidence);
+
+    return [
+      withoutUndefinedEntries({
+        reason: caveat.summary,
+        requestedEvidence,
+      }),
+    ];
+  });
+}
+
+function firstString(value: unknown): string | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value.find((item): item is string => typeof item === "string");
 }
 
 function normalizeCitations(value: unknown): unknown {
