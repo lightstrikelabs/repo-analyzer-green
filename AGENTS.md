@@ -2,6 +2,18 @@
 
 These rules apply to all agentic development work in this repository.
 
+## Before Any Code
+
+Before editing any non-test file, post each of these as a chat-visible artifact. The artifact itself is the proof; reviewers and future agents should be able to skim a session transcript and see all five.
+
+1. **Linked issue.** The GitHub issue URL for this slice. If none exists, run `/distill-issue` (or open one manually) before continuing.
+2. **Branch.** A `git status` excerpt confirming you are on a feature branch, not on `main`.
+3. **Preflight.** Output of `/preflight` covering `gh` auth, git remote, branch protection awareness, Vercel project link, lefthook install, Node/pnpm version match against `package.json` engines, and `.claude/settings.json` hook activation. Until that skill ships, follow the manual fork-day checklist in `docs/setup.md`.
+4. **Failing test (RED).** `pnpm vitest run <file>` output that names the new test and shows it in the FAIL block — produced before any non-test source edit. The PreToolUse and lefthook commit gates enforce this mechanically; the chat artifact lets reviewers verify the _behavior_, not just the file pairing.
+5. **Architecture and plan check.** One line confirming `docs/architecture.md` and `docs/development-plan.md` were skimmed for conflicts with this slice. If there is a conflict, call it out before editing and update the affected doc in the same PR.
+
+If you cannot produce one of these, stop and ask. Skipping silently is the failure mode this list exists to prevent — see `## Recent Misses`.
+
 ## Required Reading
 
 Before making code, test, tooling, or architecture changes, read:
@@ -73,3 +85,9 @@ If a task conflicts with those documents, call out the conflict before editing. 
 - Do not treat raw test LOC, raw coverage, or single static scores as direct proof of repository quality.
 - Red-green enforcement is shared tooling, not a judgment call: `.claude/settings.json` guards in-session source edits, `lefthook.yml` guards staged commits, and both rely on `scripts/red-green-gate.ts`. Update the script and the two hook surfaces together when changing the workflow.
 - Cross-agent compatibility (Claude Code, Codex CLI, pi) is captured in [docs/agent-compat.md](docs/agent-compat.md). Shared skills live at `.agents/skills/`; each agent reaches them through a relative symlink. Keep the three hook surfaces (`.claude/settings.json`, `.codex/config.toml`, future `.pi/extensions/...`) aligned when changing red-green behavior.
+
+## Recent Misses
+
+Process misses worth remembering. One line per miss with a date, a one-sentence summary, and a link to the corrective work. New entries go on top.
+
+- **2026-04-26 — PDF export shipped without observing a red test.** The TDD rule was read and rationalized away as "small UI change," and the only test added was a passing assertion written after the implementation. Corrective work landed in [#105](https://github.com/lightstrikelabs/repo-analyzer-green/pull/105) (in-session PreToolUse gate via `scripts/red-green-gate.ts`) and [#114](https://github.com/lightstrikelabs/repo-analyzer-green/pull/114) (lefthook commit-time gate sharing the same script). Lesson: classify-and-skip is the failure mode; produce the chat-visible RED test artifact every time, even for "trivial" changes.

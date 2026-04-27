@@ -1,3 +1,17 @@
+## Linked Issue
+
+Closes #<issue-number>
+
+## Before Any Code Checklist
+
+Confirm each of the five chat-visible artifacts from the AGENTS.md `## Before Any Code` section was produced during the session that wrote this PR. If any are missing, explain why.
+
+- [ ] Linked issue (above)
+- [ ] Branch (not `main`)
+- [ ] Preflight output (or manual fork-day verification per `docs/setup.md`)
+- [ ] Failing test (RED) observed before any non-test edit
+- [ ] Architecture/plan check against `docs/architecture.md` and `docs/development-plan.md`
+
 ## Scope
 
 What coherent slice does this PR complete?
