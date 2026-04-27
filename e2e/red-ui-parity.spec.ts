@@ -13,6 +13,19 @@ test.describe("red UI/UX parity", () => {
   test("matches the red first-screen analysis workflow", async ({ page }) => {
     await page.goto("/");
 
+    await expect(page.locator("body")).toHaveCSS(
+      "background-color",
+      "rgb(246, 245, 241)",
+    );
+    await expect(page.locator("body")).toHaveCSS("font-family", /Geist/);
+    await expect(page.locator("main").first()).toHaveCSS(
+      "background-color",
+      "rgb(246, 245, 241)",
+    );
+    await expect(page.locator("section").first()).toHaveCSS(
+      "background-color",
+      "rgb(251, 250, 247)",
+    );
     await expect(
       page.getByText("Repository Quality", { exact: true }),
     ).toBeVisible();
@@ -21,7 +34,19 @@ test.describe("red UI/UX parity", () => {
     ).toBeVisible();
     await expect(page.getByLabel("GitHub repository URL")).toBeVisible();
     await expect(page.getByLabel("OpenRouter API key")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Analyze" })).toBeVisible();
+    await expect(
+      page.getByTestId("repo-url-control").locator("svg"),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId("api-key-control").locator("svg"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Analyze" }).locator("svg"),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Analyze" })).toHaveCSS(
+      "background-color",
+      "rgb(17, 17, 17)",
+    );
 
     await page.getByText("Advanced", { exact: true }).click();
     await expect(page.getByLabel("OpenRouter Model")).toBeVisible();
@@ -73,6 +98,8 @@ test.describe("red UI/UX parity", () => {
       const panel = page.locator("article").filter({
         has: page.getByRole("heading", { name: section }),
       });
+      await expect(panel).toHaveCSS("background-color", "rgb(255, 255, 255)");
+      await expect(panel).toHaveCSS("border-color", "rgb(216, 210, 197)");
       await expect(panel.getByRole("heading", { name: section })).toBeVisible();
       await expect(panel.getByText("Signals", { exact: true })).toBeVisible();
       await expect(
@@ -112,8 +139,14 @@ test.describe("red UI/UX parity", () => {
     await expect(
       page.getByRole("heading", { name: "What should we fix first?" }),
     ).toBeVisible();
-    await expect(page.getByText("Conversations")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Conversations" }),
+    ).toBeVisible();
     await expect(page.getByText("Searches matching repo files")).toBeVisible();
+    await expect(page.getByRole("complementary")).toHaveCSS(
+      "background-color",
+      "rgb(251, 250, 247)",
+    );
 
     await page.getByRole("button", { name: "Close chat" }).click();
 

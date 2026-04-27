@@ -60,7 +60,7 @@ describe("buildReportDashboardViewModel", () => {
         percentOfCode: 80,
         codeLineCount: 800,
         fileCount: 10,
-        color: "#047857",
+        color: "#146c60",
         provenance: {
           source: "language-mix",
           referenceIds: ["language-code-shape:file:src/app.ts"],
@@ -71,7 +71,7 @@ describe("buildReportDashboardViewModel", () => {
         percentOfCode: 20,
         codeLineCount: 200,
         fileCount: 2,
-        color: "#2563eb",
+        color: "#d97706",
         provenance: {
           source: "language-mix",
           referenceIds: ["language-code-shape:file:README.md"],

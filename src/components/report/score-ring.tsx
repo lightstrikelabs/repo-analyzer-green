@@ -15,20 +15,20 @@ export function ScoreRing({
     <div
       role="img"
       aria-label={ariaLabel}
-      className="grid size-28 shrink-0 place-items-center rounded-full border border-slate-200 bg-white"
+      className="grid size-28 shrink-0 place-items-center rounded-full"
       style={{
         background:
           score === undefined
-            ? "conic-gradient(#cbd5e1 0deg, #e2e8f0 0deg)"
-            : `conic-gradient(#047857 ${Math.round(score * 3.6)}deg, #e2e8f0 0deg)`,
+            ? "conic-gradient(#d8d2c5 0deg, #e4dfd4 0deg)"
+            : `conic-gradient(#146c60 ${Math.round(score * 3.6)}deg, #e4dfd4 0deg)`,
       }}
     >
       <div className="grid size-20 place-items-center rounded-full bg-white text-center">
         <div>
-          <p className="text-2xl font-semibold leading-none text-slate-950">
+          <p className="text-2xl font-semibold leading-none tracking-normal text-[#111111]">
             {scoreLabel}
           </p>
-          <p className="mt-1 text-xs font-semibold uppercase text-slate-600">
+          <p className="mt-1 text-xs font-semibold uppercase text-[#146c60]">
             {grade}
           </p>
         </div>

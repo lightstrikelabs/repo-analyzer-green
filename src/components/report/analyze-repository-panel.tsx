@@ -1,12 +1,15 @@
 "use client";
 
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  useEffect,
-  useMemo,
-  useState,
-  type FormEvent,
-  type ReactNode,
-} from "react";
+  BarChart3,
+  ChevronDown,
+  GitBranch,
+  KeyRound,
+  Loader2,
+  Lock,
+  Play,
+} from "lucide-react";
 
 import {
   AnalyzeRepositoryResponseSchema,
@@ -19,7 +22,6 @@ import {
   OpenRouterModelIdSchema,
 } from "../../infrastructure/llm/openrouter-config";
 import {
-  clearBrowserLocalSession,
   defaultBrowserRepositoryForm,
   loadBrowserAnalysisSession,
   saveBrowserAnalysisSession,
@@ -216,85 +218,125 @@ export function AnalyzeRepositoryPanel() {
     }
   }
 
-  function resetSavedSession() {
-    clearBrowserLocalSession(window.localStorage);
-    setRepositoryForm(defaultBrowserRepositoryForm());
-    setApiKey("");
-    setLatestReport(null);
-    setStatus({ kind: "idle" });
-  }
-
   return (
-    <div className="min-h-screen bg-stone-50 text-slate-950">
-      <section className="border-b border-slate-200 bg-white px-4 py-5 print:hidden sm:px-6">
-        <div className="mx-auto max-w-7xl">
-          <div className="flex flex-wrap items-end justify-between gap-4">
+    <main className="min-h-screen bg-[#f6f5f1] text-[#161616]">
+      <section className="border-b border-[#d9d5ca] bg-[#fbfaf7] print:hidden">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-sm font-semibold text-emerald-700">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#146c60]">
                 Repository Quality
               </p>
-              <h1 className="mt-1 text-3xl font-semibold text-slate-950">
+              <h1 className="mt-2 text-3xl font-semibold tracking-normal text-[#111111] sm:text-4xl">
                 Report Card
               </h1>
             </div>
-            <button
-              type="button"
-              onClick={resetSavedSession}
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              Reset
-            </button>
+            {latestReport === null ? null : (
+              <div className="flex items-center gap-3 text-sm text-[#5f5b53]">
+                <Lock className="h-4 w-4" aria-hidden="true" />
+                <span>
+                  {latestReport.reportCard.reviewerMetadata.modelName ??
+                    latestReport.reportCard.reviewerMetadata.name}
+                </span>
+              </div>
+            )}
           </div>
 
           <form
+            data-1p-ignore
+            data-lpignore="true"
+            autoComplete="off"
             noValidate
             onSubmit={analyzeRepository}
-            className="mt-5 grid gap-3 lg:grid-cols-[minmax(240px,1fr)_minmax(220px,320px)_auto]"
+            className="grid gap-3"
           >
-            <Field label="GitHub repository URL">
-              <input
-                type="url"
-                inputMode="url"
-                autoComplete="url"
-                value={repositoryForm.repoUrl}
-                onChange={(event) =>
-                  updateRepositoryForm((current) => ({
-                    ...current,
-                    repoUrl: event.target.value,
-                  }))
-                }
-                placeholder="https://github.com/owner/repo"
-                className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500"
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.8fr)_auto]">
+              <label
+                className="flex min-w-0 items-center gap-3 border border-[#cfc9bb] bg-white px-3 py-2"
+                data-testid="repo-url-control"
+              >
+                <GitBranch
+                  className="h-5 w-5 shrink-0 text-[#146c60]"
+                  aria-hidden="true"
+                />
+                <span className="sr-only">GitHub repository URL</span>
+                <input
+                  name="repository-url"
+                  type="url"
+                  inputMode="url"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={repositoryForm.repoUrl}
+                  onChange={(event) =>
+                    updateRepositoryForm((current) => ({
+                      ...current,
+                      repoUrl: event.target.value,
+                    }))
+                  }
+                  placeholder="https://github.com/owner/repo"
+                  className="h-10 min-w-0 flex-1 bg-transparent text-sm text-[#161616] outline-none placeholder:text-[#8f887b]"
+                  disabled={status.kind === "loading"}
+                />
+              </label>
+
+              <label
+                className="flex min-w-0 items-center gap-3 border border-[#cfc9bb] bg-white px-3 py-2"
+                data-testid="api-key-control"
+              >
+                <KeyRound
+                  className="h-5 w-5 shrink-0 text-[#3b5bdb]"
+                  aria-hidden="true"
+                />
+                <span className="sr-only">OpenRouter API key</span>
+                <input
+                  name="openrouter-api-token"
+                  type="password"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  autoComplete="new-password"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  spellCheck={false}
+                  value={apiKey}
+                  onChange={(event) => setApiKey(event.target.value)}
+                  placeholder="OpenRouter API key"
+                  className="h-10 min-w-0 flex-1 bg-transparent text-sm text-[#161616] outline-none placeholder:text-[#8f887b]"
+                  disabled={status.kind === "loading"}
+                />
+              </label>
+
+              <button
+                type="submit"
                 disabled={status.kind === "loading"}
-              />
-            </Field>
+                className="inline-flex h-14 items-center justify-center gap-2 rounded-md bg-[#111111] px-5 text-sm font-semibold text-white transition hover:bg-[#333333] disabled:cursor-not-allowed disabled:bg-[#77736a]"
+                title="Analyze repository"
+              >
+                {status.kind === "loading" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+                {status.kind === "loading" ? "Analyzing" : "Analyze"}
+              </button>
+            </div>
 
-            <Field label="OpenRouter API key">
-              <input
-                type="password"
-                autoComplete="off"
-                value={apiKey}
-                onChange={(event) => setApiKey(event.target.value)}
-                className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500"
-                disabled={status.kind === "loading"}
-              />
-            </Field>
-
-            <button
-              type="submit"
-              disabled={status.kind === "loading"}
-              className="h-11 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-            >
-              {status.kind === "loading" ? "Analyzing" : "Analyze"}
-            </button>
-
-            <details className="lg:col-span-3">
-              <summary className="cursor-pointer text-sm font-semibold text-slate-800">
-                Advanced
+            <details className="group border border-[#d8d2c5] bg-white">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 text-sm font-semibold text-[#3f3b35]">
+                <span>Advanced</span>
+                <ChevronDown
+                  className="h-4 w-4 text-[#7b7468] transition group-open:rotate-180"
+                  aria-hidden="true"
+                />
               </summary>
-              <div className="mt-3 grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[minmax(220px,420px)_auto_auto]">
-                <Field label="OpenRouter Model">
+              <div className="grid gap-3 border-t border-[#e4dfd4] p-4 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7b7468]">
+                    OpenRouter Model
+                  </span>
                   <input
+                    name="openrouter-model-id"
                     value={repositoryForm.selectedModel}
                     onChange={(event) =>
                       updateRepositoryForm((current) => ({
@@ -302,10 +344,15 @@ export function AnalyzeRepositoryPanel() {
                         selectedModel: event.target.value,
                       }))
                     }
-                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500"
+                    placeholder={OpenRouterDefaultModelId}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="h-11 border border-[#cfc9bb] bg-[#fbfaf7] px-3 text-sm outline-none focus:border-[#146c60]"
                     disabled={status.kind === "loading"}
                   />
-                </Field>
+                </label>
                 <button
                   type="button"
                   onClick={() =>
@@ -315,7 +362,7 @@ export function AnalyzeRepositoryPanel() {
                     }))
                   }
                   disabled={status.kind === "loading"}
-                  className="h-10 self-end rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                  className="h-11 border border-[#cfc9bb] px-4 text-sm font-semibold text-[#3f3b35] transition hover:bg-[#f6f5f1] disabled:cursor-not-allowed disabled:text-[#8f887b]"
                 >
                   Use GPT-5 Mini
                 </button>
@@ -328,7 +375,7 @@ export function AnalyzeRepositoryPanel() {
                     }))
                   }
                   disabled={status.kind === "loading"}
-                  className="h-10 self-end rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                  className="h-11 border border-[#cfc9bb] px-4 text-sm font-semibold text-[#3f3b35] transition hover:bg-[#f6f5f1] disabled:cursor-not-allowed disabled:text-[#8f887b]"
                 >
                   Use Free Router
                 </button>
@@ -337,14 +384,17 @@ export function AnalyzeRepositoryPanel() {
           </form>
 
           {status.kind === "error" ? (
-            <p role="alert" className="mt-3 text-sm font-medium text-red-700">
+            <div
+              role="alert"
+              className="border border-[#be123c] bg-[#fff1f2] px-4 py-3 text-sm text-[#9f1239]"
+            >
               {status.message}
-            </p>
+            </div>
           ) : null}
         </div>
       </section>
 
-      <main className="mx-auto min-w-0 max-w-7xl px-4 py-6 sm:px-6">
+      <section className="mx-auto min-w-0 max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {reportContent.kind === "loaded" ? (
           <ReportCardView
             analysis={reportContent.analysis}
@@ -354,58 +404,67 @@ export function AnalyzeRepositoryPanel() {
         ) : reportContent.kind === "loading" ? (
           <AnalysisLoadingState phase={reportContent.phase} />
         ) : (
-          <section className="flex min-h-[520px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white p-6 text-center">
+          <section className="grid min-h-[54vh] place-items-center border border-dashed border-[#cfc9bb] bg-[#fbfaf7] p-5 text-center sm:p-8">
             <div>
-              <h2 className="text-lg font-semibold text-slate-950">
+              <BarChart3
+                className="mx-auto h-10 w-10 text-[#146c60]"
+                aria-hidden="true"
+              />
+              <h2 className="mt-5 text-xl font-semibold text-[#161616]">
                 No report loaded
               </h2>
-              <p className="mt-2 max-w-md text-sm leading-6 text-slate-700">
+              <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#7b7468]">
                 Enter a repository URL to begin.
               </p>
             </div>
           </section>
         )}
-      </main>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  readonly label: string;
-  readonly children: ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-sm font-medium text-slate-700">
-        {label}
-      </span>
-      {children}
-    </label>
+      </section>
+    </main>
   );
 }
 
 function AnalysisLoadingState({ phase }: { readonly phase: LoadingPhase }) {
   return (
-    <section className="flex min-h-[520px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white p-6 text-center">
+    <section className="grid min-h-[54vh] place-items-center border border-dashed border-[#cfc9bb] bg-[#fbfaf7] p-5 text-center sm:p-8">
       <div className="w-full max-w-md">
-        <p className="text-sm font-medium uppercase text-emerald-700">
+        <BarChart3
+          className="mx-auto h-10 w-10 text-[#146c60]"
+          aria-hidden="true"
+        />
+        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-[#146c60]">
           Analysis in progress
         </p>
-        <h2 className="mt-3 text-lg font-semibold text-slate-950">
+        <h2 className="mt-3 text-xl font-semibold text-[#161616]">
           {phase.title}
         </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-700">{phase.detail}</p>
+        <p className="mt-2 text-sm leading-6 text-[#7b7468]">{phase.detail}</p>
         <div
-          className="mt-5 h-2 overflow-hidden rounded-full bg-slate-200"
+          className="mt-6 border border-[#d8d2c5] bg-white p-4 text-left"
           aria-label={`Analysis ${phase.progress}% complete`}
         >
-          <div
-            className="h-full rounded-full bg-emerald-600 transition-[width]"
-            style={{ width: `${phase.progress}%` }}
+          <div className="flex items-center justify-between gap-4 text-xs font-semibold uppercase tracking-[0.12em] text-[#7b7468]">
+            <span>Progress</span>
+            <span>{phase.progress}%</span>
+          </div>
+          <div className="mt-3 h-3 overflow-hidden bg-[#ebe6db]">
+            <div
+              className="h-full bg-[#146c60] transition-all duration-700 ease-out"
+              style={{ width: `${phase.progress}%` }}
+            />
+          </div>
+        </div>
+        <div className="mt-4 flex items-start gap-3 border border-[#d8d2c5] bg-white p-4 text-left">
+          <Loader2
+            className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-[#d97706]"
+            aria-hidden="true"
           />
+          <div
+            aria-hidden="true"
+            className="min-w-0 text-sm leading-6 text-[#3f3b35]"
+          >
+            {phase.detail}
+          </div>
         </div>
       </div>
     </section>

@@ -10,7 +10,7 @@ export function Sparkline({
 }) {
   if (points.length === 0) {
     return (
-      <div className="grid h-16 place-items-center rounded-md border border-dashed border-slate-300 text-xs font-medium text-slate-500">
+      <div className="grid h-16 place-items-center border border-dashed border-[#d8d2c5] text-xs font-medium text-[#7b7468]">
         No chart data
       </div>
     );
@@ -34,10 +34,11 @@ export function Sparkline({
         aria-label="Section signal trend"
       >
         <title>Section signal trend</title>
+        <path d="M 1 98 H 99" stroke="#e4dfd4" strokeWidth="1" />
         <polyline
           points={polylinePoints}
           fill="none"
-          stroke="#047857"
+          stroke="#d97706"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="5"
