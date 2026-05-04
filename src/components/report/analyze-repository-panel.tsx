@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   BarChart3,
   ChevronDown,
+  Eye,
+  EyeOff,
   GitBranch,
   KeyRound,
   Loader2,
@@ -88,6 +90,7 @@ export function AnalyzeRepositoryPanel() {
     () => defaultBrowserRepositoryForm(),
   );
   const [apiKey, setApiKey] = useState("");
+  const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [latestReport, setLatestReport] =
     useState<AnalyzeRepositoryResponse | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -292,7 +295,7 @@ export function AnalyzeRepositoryPanel() {
                 <span className="sr-only">OpenRouter API key</span>
                 <input
                   name="openrouter-api-token"
-                  type="password"
+                  type={apiKeyVisible ? "text" : "password"}
                   autoCapitalize="none"
                   autoCorrect="off"
                   autoComplete="new-password"
@@ -305,6 +308,19 @@ export function AnalyzeRepositoryPanel() {
                   className="h-10 min-w-0 flex-1 bg-transparent text-sm text-[#161616] outline-none placeholder:text-[#8f887b]"
                   disabled={status.kind === "loading"}
                 />
+                <button
+                  type="button"
+                  onClick={() => setApiKeyVisible((current) => !current)}
+                  disabled={status.kind === "loading"}
+                  aria-label={apiKeyVisible ? "Hide API key" : "Show API key"}
+                  className="grid h-7 w-7 shrink-0 place-items-center text-[#7b7468] transition hover:text-[#161616] disabled:cursor-not-allowed disabled:text-[#bdb6a8]"
+                >
+                  {apiKeyVisible ? (
+                    <EyeOff className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
               </label>
 
               <button

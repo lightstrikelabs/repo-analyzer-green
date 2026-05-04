@@ -141,6 +141,25 @@ describe("AnalyzeRepositoryPanel", () => {
     expect(screen.getByText("Scoring quality")).toBeTruthy();
   });
 
+  it("toggles the OpenRouter API key field between hidden and visible", async () => {
+    const user = userEvent.setup();
+
+    render(<AnalyzeRepositoryPanel />);
+
+    const apiKeyInput = screen.getByLabelText("OpenRouter API key");
+    if (!(apiKeyInput instanceof HTMLInputElement)) {
+      throw new Error("Expected the API key field to be an input.");
+    }
+
+    expect(apiKeyInput.type).toBe("password");
+
+    await user.click(screen.getByRole("button", { name: "Show API key" }));
+    expect(apiKeyInput.type).toBe("text");
+
+    await user.click(screen.getByRole("button", { name: "Hide API key" }));
+    expect(apiKeyInput.type).toBe("password");
+  });
+
   it("shows product-focused validation copy for invalid repository URLs", async () => {
     const fetchMock = mockSuccessfulAnalyzeFetch();
     const user = userEvent.setup();
