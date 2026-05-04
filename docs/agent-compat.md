@@ -8,7 +8,7 @@ This repo is exercised by three coding-agent CLIs: Claude Code, OpenAI Codex CLI
 |---|---|---|---|---|
 | Claude Code | 2.1.119 | Anthropic Agent Skills (`SKILL.md` + frontmatter) | yes | shell commands in `.claude/settings.json` (`hooks` block) |
 | Codex CLI | 0.125.0 | Anthropic Agent Skills (`SKILL.md` + frontmatter) | yes | shell commands in `.codex/config.toml` (`[hooks.<event>]` blocks); project-local hooks require trust |
-| pi | 0.70.2 (`@mariozechner/pi-coding-agent`) | Anthropic Agent Skills (`SKILL.md` + frontmatter; lenient about violations) | yes (`--no-context-files` to disable) | JS extension API (`pi.on("tool_execution_start", ...)` etc.) — different paradigm, deferred to a follow-up |
+| pi | 0.70.2 (`@mariozechner/pi-coding-agent`) | Anthropic Agent Skills (`SKILL.md` + frontmatter; lenient about violations) | yes (`--no-context-files` to disable) | JS extension API (`pi.on("tool_call", ...)` returning `{ block: true, reason }`); a thin extension at `.pi/extensions/red-green-gate/` wraps the same `scripts/red-green-gate.ts` |
 
 ## Canonical skill store: `.agents/skills/`
 
@@ -31,7 +31,7 @@ Hook compatibility is partial:
 - **Claude Code + Codex** share the same shell-command paradigm with `PreToolUse`/`PostToolUse`/`SessionStart` matchers and a `matcher` regex. The same script (`scripts/red-green-gate.ts`) is invoked from both — only the config file differs:
   - Claude Code: `.claude/settings.json` (`"hooks": { "PreToolUse": [...] }`)
   - Codex CLI: `.codex/config.toml` (`[[hooks.PreToolUse]]` ... `[[hooks.PreToolUse.hooks]]`)
-- **Pi** uses a JS extension API where extensions subscribe to events programmatically. Wiring pi to invoke `scripts/red-green-gate.ts` requires a small JS shim under `.pi/extensions/` and is tracked as a follow-up issue.
+- **Pi** uses a JS extension API where extensions subscribe to events programmatically. The shim lives at `.pi/extensions/red-green-gate/`: a small TypeScript translator turns pi's `tool_call` event into the same JSON payload Claude Code and Codex send to the script via stdin, then `spawnSync`s `scripts/red-green-gate.ts` and translates its exit code back into pi's `{ block: true, reason }` return value. Same script, same ledger, same allowlist.
 
 The hook script (`scripts/red-green-gate.ts`) reads the project root from `$CLAUDE_PROJECT_DIR` if set, otherwise falls back to `process.cwd()`. Codex spawns hooks from the project root, so the fallback works without explicit env wiring; if a future agent needs an explicit override, add it inline in the hook command.
 
@@ -66,4 +66,4 @@ When changing red-green behavior, update all three surfaces together (or documen
 - `.claude/settings.json` — Claude Code's hook entry
 - `.codex/config.toml` — Codex's hook entry
 - `lefthook.yml` — the commit-time gate
-- `.pi/extensions/...` — pi's extension shim (when the follow-up issue lands)
+- `.pi/extensions/red-green-gate/index.ts` and `.pi/extensions/red-green-gate/translator.ts` — pi's extension shim

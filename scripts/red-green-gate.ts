@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -375,9 +381,22 @@ function readStagedFiles(
   return stagedFiles;
 }
 
-if (
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (process.argv[1] !== undefined && isInvokedAsScript(process.argv[1])) {
   await main();
+}
+
+function isInvokedAsScript(argvPath: string): boolean {
+  const candidate = pathToFileURL(argvPath).href;
+  if (import.meta.url === candidate) {
+    return true;
+  }
+  // macOS symlinks /tmp -> /private/tmp and $TMPDIR -> /private/var/folders/...
+  // process.argv[1] keeps the unresolved path while import.meta.url resolves it.
+  // Compare on real paths so the script also fires when invoked through a symlink.
+  try {
+    const realArgvUrl = pathToFileURL(realpathSync(argvPath)).href;
+    return import.meta.url === realArgvUrl;
+  } catch {
+    return false;
+  }
 }
